@@ -6,10 +6,10 @@ import math
 import os, sys
 
 # SERVER SETUP
-# s = Server(sr=44100, nchnls=2, buffersize=1024, duplex=False)
-# s.setOutputDevice(16)
-s = Server(sr=48000, nchnls=2, buffersize=1024, duplex=False)
-s.setInOutDevice(6)
+s = Server(sr=44100, nchnls=2, buffersize=1024, duplex=False)
+s.setOutputDevice(16)
+# s = Server(sr=48000, nchnls=2, buffersize=1024, duplex=False)
+# s.setInOutDevice(6)
 # LINUX AUDIO/MIDI CONFIG
 s.setMidiInputDevice(99)
 s.setMidiOutputDevice(99)
@@ -17,13 +17,13 @@ pa_list_devices()
 pm_list_devices()
 
 s.boot().start()
-s.amp = .2
+s.amp = .15
 
-dir = r'/home/charlieb/git/sci'
+dir = r'/home/charlieb/sci'
 os.chdir(dir)
 
-# PATHS
-items = os.listdir("snds")
+# PATHS 
+items = os.listdir("snds")  
 snds = []
 for names in items:
     if names.endswith(".aif") | names.endswith(".wav"):
@@ -225,11 +225,11 @@ r3 = ReSampler([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig()], TRI
 r4 = ReSampler([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig()], TRIGS[3], transpo, SIGS[15], SIGS[23], SIGS[31], channel=2, mul=MULPOW[7]).out()
 #Cause underrun
 
-fx = EffectBox([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig(), r4.sig()], SIGS[32], mul=1).out()
+fx = EffectBox([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig(), r4.sig()], SIGS[32], channel=10, mul=4).out()
 
-# a1.note.keyboard()
+a1.note.keyboard()
 # a2.note.keyboard()
-a3.note.keyboard()
+# a3.note.keyboard()
 # a4.note.keyboard()
 
 s.gui(locals())

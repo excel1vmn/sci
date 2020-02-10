@@ -360,22 +360,33 @@ class ReSampler:
         return self.p
 
 class EffectBox:
-    def __init__(self, inputs, cs, mul=1):
+    def __init__(self, inputs, cs, channel=1, mul=1):
+        self.note = Notein(poly=16, scale=1, first=0, last=127, channel=channel)
+        self.tra = MToT(self.note['pitch'])
+        self.pit = MToF(self.note['pitch'])
+
         if type(inputs) is list:
             self.ins = []
             for i in range(len(inputs)):
                 self.ins.append(inputs[i])
 
-        self.cs =[]
-        self.fx =[]
+        self.selectors = []
+        self.amps = []
+        for i in range(16):
+            self.selectors.append(Select(self.note["pitch"], value=36+i))
+            self.amps.append(MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=1, release=.1))
+
+        self.cs = []
+        self.fx = []
         for i in range(16):
             self.cs.append(SigTo(0))
-        self.fx.append(Disto(self.ins, drive=.5, slope=.5))
+
+        self.fx.append(Disto(self.ins, drive=.95, slope=.8, mul=self.amps[0]))
         self.t = CosTable([(0,-1),(3072,-0.85),(4096,0),(5520,.85),(8192,1)])
         self.b = Lookup(table=self.t, index=self.ins, mul=.5).out()
 
         self.m = Mix(self.fx)
-        self.p = Pan(self.m, outs=len(self.ins), pan=.5, spread=.4, mul=mul)
+        self.p = Pan(self.m, outs=2, pan=.5, spread=.4, mul=mul)
 
     def out(self):
         self.p.out()
