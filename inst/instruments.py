@@ -75,6 +75,7 @@ class Synth:
         self.cs3.setValue(0)
 
         self.note = Notein(poly=8, scale=0, first=0, last=127, channel=channel)
+        # self.note = noteinput
         self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
         self.amp = MidiAdsr(self.note['velocity'], attack=0.001, decay=.1, sustain=.1, release=.1)
@@ -287,38 +288,33 @@ class ReSampler:
         self.cs2 = cs2
         self.cs3 = cs3
         self.cs1.setValue(0)
-        self.cs2.setValue(0)
-        self.cs3.setValue(.5)
+        self.cs2.setValue(.1)
+        self.cs3.setValue(0)
 
         self.note = Notein(poly=8, scale=0, first=0, last=127, channel=channel)
         self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
-        self.amp = MidiAdsr(self.note['velocity'], attack=0.001, decay=.1, sustain=.7, release=.2)
+        self.amp = MidiAdsr(self.note['velocity'], attack=.1, decay=.1, sustain=.7, release=.2)
 
         if type(input) is list:
             self.input = []
-            for i in range(len(input)):
-                self.input.append(input[i])
-            self.input.append(input)
-            # print(len(self.input))
-            # self.r = []
             self.nt = []
             self.tr = []
-            for i in range(len(self.input)):
-                # self.r.append(TrigRand(self.note['trigon'], 0, 1))
-                self.nt.append(NewTable(length=2, chnls=1, feedback=0))
+            for i in range(len(input)):
+                self.input.append(input[i])
+                self.nt.append(NewTable(length=2, chnls=2, feedback=0))
                 self.tr.append(TrigTableRec(self.input[i], trig=self.launch, table=self.nt[i]))
 
-            self.morphSine = FastSine(self.cs2, mul=.5, add=.5)
-            self.tm = NewTable(length=2, chnls=1, feedback=0)
+            self.morphSine = FastSine((self.cs2 * 4)+.1, mul=.5*self.cs2, add=.5)
+            self.tm = NewTable(length=2, chnls=2, feedback=0)
             self.tf = TableMorph(self.morphSine, self.tm, self.nt)
-            self.c = OscTrig(self.tm, self.note['trigon'], (self.tm.getRate() * self.tra) * self.transpo, mul=self.amp).mix(2)
+            self.c = OscTrig(self.tm, self.note['trigon'], self.tm.getRate() * self.tra, mul=self.amp).mix(2)
 
         else:
             self.input = input
-            self.nt = NewTable(length=2, chnls=1, feedback=0)
+            self.nt = NewTable(length=2, chnls=2, feedback=0)
             self.tr = TrigTableRec(self.input, trig=self.launch, table=self.nt)
-            self.c = OscTrig(self.nt, self.note['trigon'], (self.nt.getRate() * self.tra) * self.transpo, mul=self.amp).mix(2)
+            self.c = OscTrig(self.nt, self.note['trigon'], self.nt.getRate() * self.tra, mul=self.amp).mix(2)
 
         # if channel == 10:
         #     self._tables = []
@@ -337,19 +333,20 @@ class ReSampler:
         # else:
         #     self.dist = Disto(self.c, drive=self.cs1-.05, slope=self.cs1 * .8).mix(2)
 
-        self.fs = FastSine(freq=(self.cs3 * 40) + .1, quality=0, mul=.5, add=.5)
+        self.fs = FastSine(freq=(self.cs3 * 40) + .1, quality=0, mul=.5*self.cs3, add=.5)
         self.ind = LinTable([(0,3), (20,40), (300,10), (1000,5), (8191,3)])
-        self.trMod = TrigEnv(self.note['trigon'], table=self.ind, dur=4)
-        self.fm = FM(carrier=[self.cs3*1999,self.cs3*2000], ratio=self.cs2*200, index=self.trMod, mul=self.cs2)
+        self.trMod = TrigEnv(self.note['trigon'], table=self.ind, dur=2)
+        self.fm = FM(carrier=[self.cs3*1999,self.cs3*2000], ratio=(self.cs2*200)+1, index=self.trMod, mul=self.cs2)
         self.refSine = FastSine(freq=100, mul=.3)
 
-        self.dist = Disto(self.c, drive=self.cs1-.05, slope=self.cs1*.9, mul=self.fs).mix(2)
+        self.dist = Disto(self.c, drive=self.cs1*.95, slope=self.cs1*.9, mul=self.fs).mix(2)
         self.fmDist = Disto(self.c, drive=self.fm, slope=self.fm*(self.cs1*.9), mul=1).mix(2)
-        self.lp = ButLP(self.dist+self.fmDist, 5000).mix(2)
+        self.lp = ButLP(self.dist+self.fmDist, 4000/(self.cs1*10)+1).mix(2)
+        self.lp2 = ButLP(self.lp, 5000*(self.cs1+200))
         self.bp = ButBP(self.lp, freq=(self.pit * (self.cs1 + 1)), q=self.cs1 * 20).mix(2)
         self.hp = ButHP(self.bp, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
-        self.bal = Balance(self.comp, self.refSine, freq=100).mix(2)
+        self.bal = Balance(self.hp, self.refSine, freq=100).mix(2)
+        self.comp = Compress(self.bal, thresh=-30, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
         self.p = Pan(self.bal, outs=2, pan=.5 * self.fs, spread=.4, mul=mul)
 
     def out(self):
@@ -361,31 +358,33 @@ class ReSampler:
 
 class EffectBox:
     def __init__(self, inputs, cs, channel=1, mul=1):
-        self.note = Notein(poly=16, scale=1, first=0, last=127, channel=channel)
-        self.tra = MToT(self.note['pitch'])
-        self.pit = MToF(self.note['pitch'])
+        # self.note = Notein(poly=16, scale=0, first=0, last=127, channel=channel)
+        # self.tra = MToT(self.note['pitch'])
+        # self.pit = MToF(self.note['pitch'])
 
         if type(inputs) is list:
             self.ins = []
             for i in range(len(inputs)):
                 self.ins.append(inputs[i])
+        else:
+            self.ins = inputs
+        # self.selectors = []
+        # self.amps = []
+        # for i in range(16):
+        #     self.selectors.append(Select(self.note["pitch"], value=36+i))
+        #     self.amps.append(MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=1, release=1))
 
-        self.selectors = []
-        self.amps = []
-        for i in range(16):
-            self.selectors.append(Select(self.note["pitch"], value=36+i))
-            self.amps.append(MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=1, release=.1))
-
-        self.cs = []
+        self.cs = cs
         self.fx = []
-        for i in range(16):
-            self.cs.append(SigTo(0))
 
-        self.fx.append(Disto(self.ins, drive=.95, slope=.8, mul=self.amps[0]))
+        self.fx.append(Freeverb(self.ins, size=[.89,.9], damp=.3, bal=1 ,mul=self.cs[0]))
+        self.fx.append(Disto(self.ins, drive=.95, slope=.8, mul=self.cs[1]))
         self.t = CosTable([(0,-1),(3072,-0.85),(4096,0),(5520,.85),(8192,1)])
         self.b = Lookup(table=self.t, index=self.ins, mul=.5).out()
-
-        self.m = Mix(self.fx)
+        # self.gate = Gate(self.ins, thresh=-50, risetime=0.005, falltime=0.04, lookahead=4, outputAmp=True)
+        # self.cmp = Compress(self.fx, thresh=-12, ratio=3, risetime=0.005, falltime=0.05, lookahead=4, knee=0.5, mul=self.gate)
+        self.cmp = Compress(self.fx, thresh=-12, ratio=3, risetime=0.005, falltime=0.05, lookahead=4, knee=0.5)
+        self.m = Mix(self.cmp).mix(2)
         self.p = Pan(self.m, outs=2, pan=.5, spread=.4, mul=mul)
 
     def out(self):
