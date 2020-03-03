@@ -6,10 +6,10 @@ import math
 import os, sys
 
 # SERVER SETUP
-s = Server(sr=48000, nchnls=2, buffersize=1024, duplex=False)
-s.setOutputDevice(16)
-# s = Server(sr=48000, nchnls=2, buffersize=1024, duplex=False, audio='pa')
-# s.setInOutDevice(6)
+# s = Server(sr=48000, nchnls=2, buffersize=1024, duplex=False)
+# s.setInOutDevice(16)
+s = Server(sr=48000, duplex=0)
+s.setInOutDevice(6)
 # LINUX AUDIO/MIDI CONFIG
 s.setMidiInputDevice(99)
 s.setMidiOutputDevice(99)
@@ -53,7 +53,6 @@ for names in itemK:
 # print(kicks)
 
 # GLOBALS
-# NOTES = Notein(poly=1, scale=0, first=0, last=127)
 MUL = []
 MULPOW = []
 SIGSNB = []
@@ -70,11 +69,11 @@ for i in range(16):
     TRIGS.append(Trig())
 
 # INIT
-MUL[0].value = 1
+MUL[0].value = 0
 MUL[1].value = 0
 MUL[2].value = 0
 MUL[3].value = 0
-MUL[4].value = 1
+MUL[4].value = 0
 MUL[5].value = 0
 MUL[6].value = 0
 MUL[7].value = 0
@@ -83,7 +82,7 @@ sender = OscDataSend("iffffff", 18032, '/spat/serv')
 
 # CONTROL
 def event(status, data1, data2):
-    # print(status, data1, data2)
+    print(status, data1, data2)
     if status == 176:
         value = data2/100
         # VOLUMES
@@ -170,7 +169,6 @@ def event(status, data1, data2):
             SIGSAR[6].setValue(value)
         if data1 == 75:
             SIGSAR[7].setValue(value)
-        # EFFECT VOLUMES
         if data1 == 114:
             SIGSAR[8].setValue(value)
         if data1 == 18:
@@ -196,21 +194,25 @@ def ctl_scan(ctlnum, midichnl):
         if 20 <= ctlnum <= 31 or 52 <= ctlnum <= 55 or 4 <= ctlnum <= 7:
             # if ctlnum == 21:
             #     s.ctlout(20, 127, 3)
-            for i in range(len(TRIGS)):
-                TRIGS[i].stop()
+            # for i in range(len(TRIGS)):
+            #     TRIGS[i].stop()
             if ctlnum == 20 or 4: #STEP 1
-                TRIGS[0].play()
+                # TRIGS[0].play()
+                r1.tr.play()
             if ctlnum == 24 or 5: #STEP 5
-                TRIGS[1].play()
+                # TRIGS[1].play()
+                r2.tr.play()
             if ctlnum == 28 or 6: #Step 9
-                TRIGS[2].play()
+                # TRIGS[2].play()
+                r3.tr.play()
             if ctlnum == 52 or 7: #Step 13
-                TRIGS[3].play()
+                # TRIGS[3].play()
+                r4.tr.play()
                 
-a = CtlScan2(ctl_scan, True)
+a = CtlScan2(ctl_scan, False)
 
 transpo = Bendin(brange=2, scale=1)
-# High frequency damping mapped to controller number 1.
+# High frequency damping mapped to controller number1.
 hfdamp = Midictl(ctlnumber=[1], minscale=100, maxscale=10000, init=5000, channel=1)
 # Frequency of the LFO applied to the speed of the moving notches.
 lfofreq = Midictl(ctlnumber=[1], minscale=0.1, maxscale=8, init=0.2, channel=1)
@@ -225,22 +227,21 @@ n10 = Notein(poly=16, scale=0, first=0, last=127, channel=10)
 a1 = Synth(n1, transpo, hfdamp, lfofreq, SIGSNB[0], SIGSNB[8], SIGSNB[16], channel=1, mul=MULPOW[0]).out()
 
 a2 = FreakSynth(n1, transpo, hfdamp, lfofreq, SIGSNB[1], SIGSNB[9], SIGSNB[17], channel=1, mul=MULPOW[1]).out()
-
 a3 = Simpler(n2, snds[3], transpo, hfdamp, lfofreq, SIGSNB[2], SIGSNB[10], SIGSNB[18], channel=2, mul=MULPOW[2]).out()
-
 a4 = WaveShape(n2, snds[9], transpo, hfdamp, lfofreq, SIGSNB[3], SIGSNB[11], SIGSNB[19], channel=2, mul=MULPOW[3]).out()
 
 # p1 = Pads(sndsSB[6], transpo, hfdamp, channel=10).out()
 # d1 = Drums(kicks, transpo, hfdamp, channel=10, mul=1).out()
 
-# #Cause underrun
-r1 = ReSampler(n1, a1.sig()+a2.sig()+a3.sig()+a4.sig(), TRIGS[0], transpo, SIGSNB[4], SIGSNB[12], SIGSNB[20], channel=1, mul=MULPOW[4]).out()
-r2 = ReSampler(n2, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig(), TRIGS[1], transpo, SIGSNB[5], SIGSNB[13], SIGSNB[21], channel=2, mul=MULPOW[5]).out()
-r3 = ReSampler(n1, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig(), TRIGS[2], transpo, SIGSNB[6], SIGSNB[14], SIGSNB[22], channel=1, mul=MULPOW[6]).out()
-r4 = ReSampler(n2, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig()+r3.sig(), TRIGS[3], transpo, SIGSNB[7], SIGSNB[15], SIGSNB[23], channel=2, mul=MULPOW[7]).out()
+#Cause underrun
+r1 = ReSampler(n1, a1.sig()+a2.sig()+a3.sig()+a4.sig(), transpo, SIGSNB[4], SIGSNB[12], SIGSNB[20], channel=1, mul=MULPOW[4]).out()
+r2 = ReSampler(n2, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig(), transpo, SIGSNB[5], SIGSNB[13], SIGSNB[21], channel=2, mul=MULPOW[5]).out()
+r3 = ReSampler(n1, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig(), transpo, SIGSNB[6], SIGSNB[14], SIGSNB[22], channel=1, mul=MULPOW[6]).out()
+r4 = ReSampler(n2, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig()+r3.sig(), transpo, SIGSNB[7], SIGSNB[15], SIGSNB[23], channel=2, mul=MULPOW[7]).out()
 # #Cause underrun
 
-fx = EffectBox(a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig()+r3.sig()+r4.sig(), SIGSAR, channel=10, mul=2).out()
+fx = EffectBox(a1.sig()+a2.sig()+a3.sig()+a4.sig(), SIGSAR, channel=10, mul=2).out()
+# r1.sig()+r2.sig()+r3.sig()+r4.sig()
 
 # a1.note.keyboard()
 # a2.note.keyboard()
