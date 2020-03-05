@@ -37,8 +37,8 @@ class ReSampler:
         self.refSine = FastSine(freq=100, mul=.12)
         self.trMod = TrigEnv(self.note['trigon'], table=self.ind, dur=2)
 
-        self.fm = FM(carrier=self.trMod, ratio=(self.cs2*200)+1, index=self.c, mul=self.amp).mix(2)
-        self.bal = Balance(self.c, self.refSine, freq=100).mix(2)
+        self.fm = FM(carrier=self.pit, ratio=self.c, index=self.trMod, mul=self.amp).mix(2)
+        self.bal = Balance(self.fm, self.refSine, freq=100).mix(2)
         self.p = Pan(self.bal, outs=2, pan=self.fs, spread=self.valVel, mul=mul)
 
     def out(self):
@@ -52,7 +52,7 @@ class ReSampler:
     	self.tr.play()
 
     def create_points(self):
-        self.randPoints = [random.uniform(-1,1),random.uniform(-1,1),random.uniform(-1,1),random.uniform(-1,1)]
+        self.randPoints = [random.uniform(-10,10),random.uniform(-10,10),random.uniform(-10,10),random.uniform(-10,10)]
         self.randPositions = [random.randint(10, 1024),random.randint(1025, 2048),random.randint(2049, 4096),random.randint(4097, 8000)]
         # print(self.randPoints)
         self.lst = [(0, 0)]

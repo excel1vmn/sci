@@ -5,21 +5,17 @@ from pyo import *
 import math
 
 class Simpler:
-    def __init__(self, noteinput, paths, transpo=1, hfdamp=5000, lfofreq=0.2, cs1=1, cs2=1, cs3=1, autoswitch=False, withloop=False, channel=0, mul=1):
+    def __init__(self, noteinput, paths, transpo=1, hfdamp=5000, lfofreq=0.2, cs1=0, cs2=0, cs3=0, autoswitch=False, withloop=False, channel=0, mul=1):
         self.transpo = Sig(transpo)
         self.cs1 = cs1
         self.cs2 = cs2
         self.cs3 = cs3
-        self.cs1.setValue(.5)
-        self.cs2.setValue(0)
-        self.cs3.setValue(0)
 
         self.paths = paths
         self.t = SndTable(self.paths, initchnls=2)
         self.freq = self.t.getRate()
         self.dur = self.t.getDur()
 
-        # self.note = Notein(poly=10, scale=0, first=0, last=127, channel=channel)
         self.note = noteinput
         self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
@@ -335,26 +331,23 @@ class ReSampler:
         # else:
         #     self.dist = Disto(self.c, drive=self.cs1-.05, slope=self.cs1 * .8).mix(2)
 
-        self.ind = LinTable([(0,0), (8191,0)], size=8192)
-        self.ind.view()
-        self.envGen = TrigFunc(self.note['trigon'], self.create_points)
         self.c = OscTrig(self.nt, self.note['trigon'], self.nt.getRate() * self.tra, mul=self.amp).mix(2)
 
-        self.fs = FastSine(freq=(self.cs3 * 50) + .1, quality=0, mul=self.valVel*8, add=.5)
-        self.refSine = FastSine(freq=100, mul=.12)
-        self.trMod = TrigEnv(self.note['trigon'], table=self.ind, dur=2)
+        self.fs = FastSine(freq=(self.cs3 * 50) + .1, quality=0, mul=self.valVel*4, add=.5)
+        self.refSine = FastSine(freq=100, mul=.15)
+        
+        self.envGen = TrigFunc(self.note['trigon'], self.create_points)
+        self.ind = LinTable([(0,0), (8191,0)], size=8192)
+        self.trMod = TrigEnv(self.note['trigon'], table=self.ind, dur=self.tabLenght)
+        # self.ind.view()
 
-        # [self.cs3*1999,self.cs3*2000]
-
-        self.fm = FM(carrier=self.trMod, ratio=(self.cs2*200)+1, index=self.c, mul=self.amp).mix(2)
-        # self.dist = Disto(self.c, drive=self.cs1*.95, slope=1, mul=self.fs).mix(2)
+        self.dist = Disto(self.c, drive=self.trMod*self.cs1, slope=1, mul=self.fs).mix(2)
         # self.fmDist = Disto(self.c, drive=self.fm, slope=1).mix(2)
         # self.lp = ButLP(self.dist+self.fmDist, ((self.cs1+.01)*100)*150).mix(2)
         # self.lp2 = ButLP(self.lp, ((self.cs1+.01)*100)*150).mix(2)
         # self.bp = ButBP(self.lp2, freq=self.trMod).mix(2)
         # self.hp = ButHP(self.bp, 50).mix(2)
-        self.bal = Balance(self.c, self.refSine, freq=100).mix(2)
-        # self.comp = Compress(self.bal, thresh=-30, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.bal = Balance(self.dist, self.refSine, freq=100).mix(2)
         self.p = Pan(self.bal, outs=2, pan=self.fs, spread=self.valVel, mul=mul)
 
     def out(self):
@@ -364,8 +357,11 @@ class ReSampler:
     def sig(self):
         return self.p
 
+    def rec(self):
+        self.tr.play()
+
     def create_points(self):
-        self.randPoints = [random.uniform(-1,1),random.uniform(-1,1),random.uniform(-1,1),random.uniform(-1,1)]
+        self.randPoints = [random.uniform(-10,10),random.uniform(-10,10),random.uniform(-10,10),random.uniform(-10,10)]
         self.randPositions = [random.randint(10, 1024),random.randint(1025, 2048),random.randint(2049, 4096),random.randint(4097, 8000)]
         # print(self.randPoints)
         self.lst = [(0, 0)]
@@ -383,12 +379,12 @@ class EffectBox:
         # self.tra = MToT(self.note['pitch'])
         # self.pit = MToF(self.note['pitch'])
 
-        if type(inputs) is list:
-            self.ins = []
-            for i in range(len(inputs)):
-                self.ins.append(inputs[i])
-        else:
-            self.ins = inputs
+        # if type(inputs) is list:
+        #     self.ins = []
+        #     for i in range(len(inputs)):
+        #         self.ins.append(inputs[i])
+        # else:
+        self.ins = inputs
         # self.selectors = []
         # self.amps = []
         # for i in range(16):
@@ -400,9 +396,9 @@ class EffectBox:
 
         self.fx.append(Freeverb(self.ins, size=[.89,.9], damp=.3, bal=1 ,mul=self.cs[0]))
         self.fx.append(Disto(self.ins, drive=.95, slope=.8, mul=self.cs[1]))
-        self.fx.append(MoogLP(self.ins, freq=(self.cs[15]+1)*8000, res=2))
-        self.t = CosTable([(0,-1),(3072,-0.85),(4096,0),(5520,.85),(8192,1)])
-        self.b = Lookup(table=self.t, index=self.ins, mul=.5)
+        # self.fx.append(MoogLP(self.ins, freq=(self.cs[15]+1)*8000, res=2))
+        # self.t = CosTable([(0,-1),(3072,-0.85),(4096,0),(5520,.85),(8192,1)])
+        # self.b = Lookup(table=self.t, index=self.ins, mul=.5)
         # self.gate = Gate(self.ins, thresh=-50, risetime=0.005, falltime=0.04, lookahead=4, outputAmp=True)
         # self.cmp = Compress(self.fx, thresh=-12, ratio=3, risetime=0.005, falltime=0.05, lookahead=4, knee=0.5, mul=self.gate)
         self.cmp = Compress(self.fx, thresh=-12, ratio=3, risetime=0.005, falltime=0.05, lookahead=4, knee=0.5)
