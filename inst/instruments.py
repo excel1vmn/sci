@@ -29,27 +29,30 @@ class Simpler:
 
         self.tf = CosTable([(0,-1),(3072,-0.85),(4096,0),(5520,.85),(8192,1)])
 
-        self.osc = OscTrig(self.t, self.note['trigon'], (self.freq*self.tra))
-        self.fol = Follower(self.osc*(self.cs1*100)+1, mul=(self.cs3*5)+.5)
+        self.osc1 = OscTrig(self.t, self.note['trigon'], (self.freq*self.tra), mul=self.amp).mix(1)
+        self.osc2 = OscTrig(self.t, self.note['trigon'], (self.freq*self.tra), mul=self.amp).mix(1)
 
-        self.cfm = CrossFM(carrier=self.osc*self.pit, ratio=[(self.trand*0.98)*((self.cs2*20)+1), (self.trand*1.02)*((self.cs2*19)+1)], ind1=self.trand*((self.cs2*20)+1), ind2=(self.osc*self.trand)*((self.cs2*20)+1), mul=self.amp).mix(2)
-        self.look = Lookup(table=self.tf, index=self.cfm*((self.cs3+.1)*10), mul=self.fol*(self.cs3*5)).mix(2)
+        self.fol = Follower((self.osc1+self.osc2)*(self.cs1*100)+1, mul=0)#(self.cs3*5)+.5
+
+        self.cfm = CrossFM(carrier=(self.osc1+self.osc2)*self.pit, ratio=[(self.trand*0.98)*((self.cs2*20)+1), (self.trand*1.02)*((self.cs2*19)+1)], ind1=self.trand*((self.cs2*20)+1), ind2=(self.osc1*self.trand)*((self.cs2*20)+1), mul=self.amp).mix(2)
+
+        self.look = Lookup(table=self.tf, index=(self.cs2+1)*10, mul=self.fol*(self.cs2*5)).mix(2).out()
 
         self.lfo = Sine(lfofreq, phase=[random.random(), random.random()]).range(250, 4000)
 
-        self.mix = Mix(self.cfm*(self.look+1), voices=2)
+        self.mix = Mix((self.osc1+self.osc2)*(self.look+1), voices=2)#
         self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
         self.notch = ButBR(self.damp, self.lfo).mix(2)
         self.hp = ButHP(self.notch, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-30, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
-        self.pan = Pan(self.comp, outs=2, pan=self.ampLfo, spread=.3, mul=mul)
+        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5, mul=.1).mix(2)
+        self.p = Pan(self.comp, outs=2, pan=self.ampLfo, spread=.3, mul=mul)
 
     def out(self):
-        self.pan.out()
+        self.p.out()
         return self
 
     def sig(self):
-        return self.pan
+        return self.p
 
     def randMod(self):
         self.r = random.uniform(.2, 1)
@@ -62,42 +65,41 @@ class Simpler:
         self.t.setSound(newpath)
 
 class Synth:
-    def __init__(self, noteinput, transpo=1, hfdamp=5000, lfofreq=0.2, cs1=1, cs2=1, cs3=1, channel=0, mul=1):
+    def __init__(self, noteinput, transpo=1, hfdamp=5000, lfofreq=0.2, cs1=0, cs2=0, cs3=0, channel=0, mul=1):
         self.transpo = Sig(transpo)
         self.cs1 = cs1
         self.cs2 = cs2
         self.cs3 = cs3
-        self.cs1.setValue(0)
-        self.cs2.setValue(0)
-        self.cs3.setValue(0)
 
-        # self.note = Notein(poly=10, scale=0, first=0, last=127, channel=channel)
         self.note = noteinput
         self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.1, release=.1)
 
-        self.trand = TrigRand(self.note['trigon'], .01, 1)
-        self.sigRand = SigTo(self.trand)
+        # self.trand = TrigRand(self.note['trigon'], .01, 1)
+        self.sigRand = SigTo(TrigRand(self.note['trigon'], .01, 1))
         # self.veltrand = TrigRand(self.note['trigon'], self.note['velocity'], (self.note['velocity'] * 10))
         self.ampLfo = FastSine(self.sigRand * 20, quality=0, mul=.5, add=.5)
+        self.te = ExpTable([(0,0),(4096,1),(8192,0)], exp=5, inverse=True)
+        self.logOsc = Osc(table=self.te, freq=2*(self.cs3+2))
+        self.fs = FastSine(freq=self.logOsc*((self.cs3)*50), mul=2)
 
         self.tf = TrigFunc(self.note['trigon'], self.randMod)
 
-        self.osc1 = LFO(self.pit, sharp=self.trand, type=2, mul=self.amp)
-        self.osc2 = LFO(self.pit*0.995, sharp=self.trand, type=2, mul=self.amp)
+        self.osc1 = LFO(self.pit, sharp=self.sigRand, type=2, mul=self.fs)
+        self.osc2 = LFO((self.pit*0.995), sharp=self.sigRand, type=2, mul=self.fs)
 
         self.fol = Follower(self.osc1 + self.osc2, mul=self.cs3*5)
 
-        self.f1 = CrossFM(carrier=self.pit, ratio=self.osc1, ind1=self.amp * (self.trand * (self.fol+1)) * (self.cs1 * 101), ind2=(self.fol+1) * (self.trand * (self.cs1*.5)), mul=self.amp)
-        self.f2 = CrossFM(carrier=self.pit, ratio=self.osc2, ind1=self.amp * (self.trand * (self.fol+1)) * (self.cs1 * 99), ind2=(self.fol+1) * (self.trand * (self.cs1*.5)), mul=self.amp)
+        self.f1 = CrossFM(carrier=self.pit, ratio=self.osc1, ind1=self.amp * (self.sigRand * (self.fol+1)) * (self.cs1 * 101), ind2=(self.fol+1) * (self.sigRand * (self.cs1*.5)), mul=self.amp*self.fs)
+        self.f2 = CrossFM(carrier=self.pit, ratio=self.osc2, ind1=self.amp * (self.sigRand * (self.fol+1)) * (self.cs1 * 99), ind2=(self.fol+1) * (self.sigRand * (self.cs1*.5)), mul=self.amp*self.fs)
 
         self.mix = Mix([self.f1, self.f2], voices=2)
         self.lfo = Sine(lfofreq, phase=[random.random(), random.random()]).range(240, 4000)
         self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
         self.notch = ButBR(self.damp, (self.lfo + 1)).mix(2)
         self.hp = ButHP(self.notch, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-24, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5, mul=.1).mix(2)
         self.p = Pan(self.comp, outs=2, pan=self.ampLfo, spread=.2, mul=mul)
 
     def out(self):
@@ -148,7 +150,7 @@ class FreakSynth:
         self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
         self.notch = ButBR(self.damp, self.lfo).mix(2)
         self.hp = ButHP(self.notch, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-30, ratio=8, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5, mul=.1).mix(2)
         self.p = Pan(self.comp, outs=2, pan=self.ampLfo, spread=self.valVel, mul=mul)
 
     def out(self):
@@ -183,7 +185,7 @@ class WaveShape:
         self.veltrand = TrigRand(self.note['trigon'], .1, self.note['velocity'] * 4)
         self.ampLfo = FastSine(self.veltrand, quality=0, mul=.5, add=.5)
 
-        self.lfo = Sine(freq=[self.sigto, self.sigto * .5], mul=.25, add=.25)
+        self.lfo = Sine(freq=[self.sigto, self.sigto * .5], mul=.1, add=.25)
         self.a = TrigEnv(self.note['trigon'], self.snd, (self.dur / self.transpo) / self.tra, mul=.5)
         self.t = CosTable([(0,-1),(3072,-0.85),(4096,0),(5520,.85),(7120,-.5),(8192,1)])
         # self.f = IRPulse(self.a, freq=MToF(self.note['pitch']), bw=50 * MToF(self.note['pitch']) * self.lfo, type=3, order=256)
@@ -193,11 +195,11 @@ class WaveShape:
         self.mix = Mix(self.b, voices=2)
         self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
         self.hp = ButHP(self.damp, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-24, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5, mul=.1).mix(2)
         self.p = Pan(self.comp, outs=2, pan=self.ampLfo, spread=.5, mul=mul)
 
     def out(self):
-        self.p.out()#peux-être ça
+        self.p.out()
         return self
 
     def sig(self):
@@ -270,7 +272,7 @@ class Drums:
         self.mix = Mix(self.players, voices=16)
         self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
         self.hp = ButHP(self.damp, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-24, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5, mul=.1).mix(2)
         self.p = Pan(self.comp, outs=2, pan=[.25,.75], spread=.5, mul=mul)
 
     def out(self):
@@ -281,20 +283,20 @@ class Drums:
         return self.p
 
 class ReSampler:
-    def __init__(self, noteinput, input, transpo=1, cs1=0, cs2=0, cs3=0, channel=0, mul=1):
-        self.transpo = transpo
-        self.cs1 = cs1
-        self.cs2 = cs2
-        self.cs3 = cs3
+    def __init__(self, noteinput, input, transpo=1, cs1=0, cs2=0, cs3=0, mul=1):
+        self._transpo = transpo
+        self._cs1 = cs1
+        self._cs2 = cs2
+        self._cs3 = cs3
 
-        self.note = noteinput
-        self.tra = MToT(self.note['pitch']) * self.transpo
-        self.pit = MToF(self.note['pitch']) * self.transpo
-        self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.2)
+        self._note = noteinput
+        self._tra = MToT(self._note['pitch']) * self._transpo
+        self._pit = MToF(self._note['pitch']) * self._transpo
+        self._amp = MidiAdsr(self._note['velocity'], attack=.01, decay=.1, sustain=.7, release=.2)
 
-        self.valVel = SigTo(self.note['velocity'], .01)
+        self._valVel = SigTo(self._note['velocity'], .01)
+        self._tabLenght = sampsToSec(49152)
 
-        self.tabLenght = sampsToSec(49152)
 
         # if type(input) is list:
         #     self.input = []
@@ -305,9 +307,9 @@ class ReSampler:
         #         self.nt.append(NewTable(length=self.tabLenght, chnls=2, feedback=0))
         #         self.tr.append(TableRec(self.input[i], table=self.nt[i], fadetime=.01))
         # else:
-        self.input = input
-        self.nt = NewTable(length=self.tabLenght, chnls=2, feedback=0)
-        self.tr = TableRec(self.input, table=self.nt, fadetime=.01)
+        self._input = input
+        self.nt = NewTable(length=self._tabLenght, chnls=2, feedback=0)
+        self.tr = TableRec(self._input, table=self.nt, fadetime=.01)
 
         #     self.morphSine = FastSine((self.cs2 * 4)+.1, mul=.5*self.cs2, add=.5)
         #     self.tm = NewTable(length=2, chnls=2, feedback=0)
@@ -330,25 +332,27 @@ class ReSampler:
         #     self.dist = Disto(self._fms, drive=self.cs1-.05, slope=self.cs1 * .8).mix(2)
         # else:
         #     self.dist = Disto(self.c, drive=self.cs1-.05, slope=self.cs1 * .8).mix(2)
-
-        self.c = OscTrig(self.nt, self.note['trigon'], self.nt.getRate() * self.tra, mul=self.amp).mix(2)
-
-        self.fs = FastSine(freq=(self.cs3 * 50) + .1, quality=0, mul=self.valVel*4, add=.5)
-        self.refSine = FastSine(freq=100, mul=.15)
         
-        self.envGen = TrigFunc(self.note['trigon'], self.create_points)
+        self.envGen = TrigFunc(self._note['trigon'], self.create_points, arg=self._cs2)
         self.ind = LinTable([(0,0), (8191,0)], size=8192)
-        self.trMod = TrigEnv(self.note['trigon'], table=self.ind, dur=self.tabLenght)
+        self.trMod = TrigEnv(self._note['trigon'], table=self.ind, dur=self._tabLenght, mul=self._cs2)
         # self.ind.view()
 
-        self.dist = Disto(self.c, drive=self.trMod*self.cs1, slope=1, mul=self.fs).mix(2)
+        self.c = OscTrig(self.nt, self._note['trigon'], (self.nt.getRate()) * self._tra, mul=self._amp).mix(2)
+
+        self.fs = FastSine(freq=(self._cs3 * 500) + self.trMod, quality=0, mul=self._valVel*4, add=.5)
+        self.refSine = FastSine(freq=100, mul=.15)
+        
+
+        self.dist = Disto(self.c, drive=self.trMod*self._cs1, slope=1, mul=self.fs).mix(2)
         # self.fmDist = Disto(self.c, drive=self.fm, slope=1).mix(2)
-        # self.lp = ButLP(self.dist+self.fmDist, ((self.cs1+.01)*100)*150).mix(2)
-        # self.lp2 = ButLP(self.lp, ((self.cs1+.01)*100)*150).mix(2)
+        # self.lp = ButLP(self.dist+self.fmDist, ((self._cs1+.01)*100)*150).mix(2)
+        # self.lp2 = ButLP(self.lp, ((self._cs1+.01)*100)*150).mix(2)
         # self.bp = ButBP(self.lp2, freq=self.trMod).mix(2)
         # self.hp = ButHP(self.bp, 50).mix(2)
         self.bal = Balance(self.dist, self.refSine, freq=100).mix(2)
-        self.p = Pan(self.bal, outs=2, pan=self.fs, spread=self.valVel, mul=mul)
+        self.comp = Compress(self.bal, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5, mul=.5).mix(2)
+        self.p = Pan(self.comp, outs=2, pan=self.fs, spread=self._valVel, mul=mul)
 
     def out(self):
         self.p.out()
@@ -360,7 +364,8 @@ class ReSampler:
     def rec(self):
         self.tr.play()
 
-    def create_points(self):
+    def create_points(self, value):
+        self.value = value + 1
         self.randPoints = [random.uniform(-10,10),random.uniform(-10,10),random.uniform(-10,10),random.uniform(-10,10)]
         self.randPositions = [random.randint(10, 1024),random.randint(1025, 2048),random.randint(2049, 4096),random.randint(4097, 8000)]
         # print(self.randPoints)
@@ -374,17 +379,17 @@ class ReSampler:
         self.ind.replace(self.lst)
 
 class EffectBox:
-    def __init__(self, inputs, cs, channel=1, mul=1):
-        # self.note = Notein(poly=16, scale=0, first=0, last=127, channel=channel)
+    def __init__(self, input, cs, channel=1, mul=1):
+        # self.note = noteinput
         # self.tra = MToT(self.note['pitch'])
         # self.pit = MToF(self.note['pitch'])
 
         # if type(inputs) is list:
-        #     self.ins = []
+        #     self._ins = []
         #     for i in range(len(inputs)):
-        #         self.ins.append(inputs[i])
+        #         self._ins.append(inputs[i])
         # else:
-        self.ins = inputs
+        self._ins = input
         # self.selectors = []
         # self.amps = []
         # for i in range(16):
@@ -394,16 +399,15 @@ class EffectBox:
         self.cs = cs
         self.fx = []
 
-        self.fx.append(Freeverb(self.ins, size=[.89,.9], damp=.3, bal=1 ,mul=self.cs[0]))
-        self.fx.append(Disto(self.ins, drive=.95, slope=.8, mul=self.cs[1]))
-        # self.fx.append(MoogLP(self.ins, freq=(self.cs[15]+1)*8000, res=2))
+        self.fx.append(Freeverb(self._ins, size=[.89,.9], damp=.3, bal=1 ,mul=self.cs[0]).mix(2))
+        self.fx.append(Disto(self._ins, drive=.95, slope=.8, mul=self.cs[1]).mix(2))
+        # self.fx.append(MoogLP(self._ins, freq=(self.cs[15]+1)*8000, res=2))
         # self.t = CosTable([(0,-1),(3072,-0.85),(4096,0),(5520,.85),(8192,1)])
-        # self.b = Lookup(table=self.t, index=self.ins, mul=.5)
-        # self.gate = Gate(self.ins, thresh=-50, risetime=0.005, falltime=0.04, lookahead=4, outputAmp=True)
+        # self.b = Lookup(table=self.t, index=self._ins, mul=.5)
+        # self.gate = Gate(self._ins, thresh=-50, risetime=0.005, falltime=0.04, lookahead=4, outputAmp=True)
         # self.cmp = Compress(self.fx, thresh=-12, ratio=3, risetime=0.005, falltime=0.05, lookahead=4, knee=0.5, mul=self.gate)
-        self.cmp = Compress(self.fx, thresh=-12, ratio=3, risetime=0.005, falltime=0.05, lookahead=4, knee=0.5)
-        self.m = Mix(self.cmp).mix(2)
-        self.p = Pan(self.m, outs=2, pan=.5, spread=.4, mul=mul)
+        self.comp = Compress(self._ins + self.fx, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5, mul=.1).mix(2)
+        self.p = Pan(self.comp, outs=2, pan=.5, spread=.4, mul=mul)
 
     def out(self):
         self.p.out()
@@ -411,3 +415,19 @@ class EffectBox:
 
     def sig(self):
         return self.p
+
+# class GestesMus:
+#     def __init__(self, input, mul=1):
+#         self._input = input
+#         self._in_fader = InputFader(input)
+
+#         self.lfo = FastSine(freq=[.3,.4,.5,.6], mul=.5, add=.5)
+#         self.mb = MultiBand(self._input, num=4, mul=self.lfo).mix(2)
+#         self.p = Pan(self.mb, outs=2, pan=.5, spread=.4, mul=mul)
+
+#     def out(self):
+#         self.p.out()
+#         return self
+
+#     def sig(self):
+#         return self.p

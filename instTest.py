@@ -2,13 +2,14 @@
 # encoding: utf-8
 from pyo import *
 from inst.instruments import *
+from inst.GestesMus import *
 import math
 import os, sys
 
 # SERVER SETUP
-# s = Server(sr=48000, nchnls=2, buffersize=1024, duplex=False)
+# s = Server(sr=48000, duplex=0, audio='pa')
 # s.setInOutDevice(16)
-s = Server(sr=48000, duplex=0, audio='pa')
+s = Server(sr=48000, nchnls=2, duplex=0, audio='pa')
 s.setInOutDevice(6)
 # LINUX AUDIO/MIDI CONFIG
 s.setMidiInputDevice(99)
@@ -17,13 +18,13 @@ s.setMidiOutputDevice(99)
 # pm_list_devices()
 
 s.boot().start()
-s.amp = .1
+s.amp = .3
 
 dir = r'/home/charlieb/sci'
 os.chdir(dir)
 
 # PATHS 
-items = os.listdir("snds")  
+items = os.listdir("snds")
 snds = []
 for names in items:
     if names.endswith(".aif") | names.endswith(".wav"):
@@ -47,7 +48,7 @@ for names in itemK:
     if names.endswith(".aif") | names.endswith(".wav"):
         kicks.append("kicks/" + names)
 
-# print(snds)
+print(snds)
 # print(sndsDrums)
 # print(sndsSB)
 # print(kicks)
@@ -82,9 +83,10 @@ sender = OscDataSend("iffffff", 18032, '/spat/serv')
 
 # CONTROL
 def event(status, data1, data2):
-    print(status, data1, data2)
+    # print(status, data1, data2)
     if status == 176:
-        value = data2/100
+        value = data2/127
+        # print(value)
         # VOLUMES
         if data1 == 0:
             MUL[0].setValue(value)
@@ -207,8 +209,8 @@ def ctl_scan(ctlnum, midichnl):
 a = CtlScan2(ctl_scan, False)
 
 transpo = Bendin(brange=2, scale=1, channel=1)
-# High frequency damping mapped to controller number1.
-hfdamp = Midictl(ctlnumber=[1], minscale=100, maxscale=10000, init=5000, channel=1)
+# High frequency damping mapped to controller number 1.
+hfdamp = Midictl(ctlnumber=[72], minscale=50, maxscale=15000, init=5000, channel=3)
 # Frequency of the LFO applied to the speed of the moving notches.
 lfofreq = Midictl(ctlnumber=[1], minscale=0.1, maxscale=8, init=0.2, channel=1)
 
@@ -217,37 +219,41 @@ n1 = Notein(poly=10, scale=0, first=0, last=127, channel=1)
 n2 = Notein(poly=10, scale=0, first=0, last=127, channel=2)
 n3 = Notein(poly=10, scale=0, first=0, last=127, channel=3)
 n10 = Notein(poly=16, scale=0, first=0, last=127, channel=10)
-a1 = Synth(n1, transpo, hfdamp, lfofreq, SIGSNB[0], SIGSNB[8], SIGSNB[16], channel=1, mul=MULPOW[0]).out()
-a2 = FreakSynth(n1, transpo, hfdamp, lfofreq, SIGSNB[1], SIGSNB[9], SIGSNB[17], channel=1, mul=MULPOW[1]).out()
-a3 = Simpler(n2, snds[3], transpo, hfdamp, lfofreq, SIGSNB[2], SIGSNB[10], SIGSNB[18], channel=2, mul=MULPOW[2]).out()
-a4 = WaveShape(n2, snds[9], transpo, hfdamp, lfofreq, SIGSNB[3], SIGSNB[11], SIGSNB[19], channel=2, mul=MULPOW[3]).out()
 
-# p1 = Pads(sndsSB[6], transpo, hfdamp, channel=10).out()
-# d1 = Drums(kicks, transpo, hfdamp, channel=10, mul=1).out()
+a1 = Synth(n1, transpo, hfdamp, lfofreq, SIGSNB[0], SIGSNB[8], SIGSNB[16], channel=1, mul=MULPOW[0])
+a2 = FreakSynth(n1, transpo, hfdamp, lfofreq, SIGSNB[1], SIGSNB[9], SIGSNB[17], channel=1, mul=MULPOW[1])
+a3 = Simpler(n1, snds[1], transpo, hfdamp, lfofreq, SIGSNB[2], SIGSNB[10], SIGSNB[18], channel=2, mul=MULPOW[2])
+a4 = WaveShape(n1, snds[9], transpo, hfdamp, lfofreq, SIGSNB[3], SIGSNB[11], SIGSNB[19], channel=2, mul=MULPOW[3])
+
+# p1 = Pads(sndsSB[6], transpo, hfdamp, channel=10)
+# d1 = Drums(kicks, transpo, hfdamp, channel=10, mul=1)
 
 #Cause underrun
-r1 = ReSampler(n1, a1.sig()+a2.sig()+a3.sig()+a4.sig(), transpo, SIGSNB[4], SIGSNB[12], SIGSNB[20], channel=1, mul=MULPOW[4]).out()
-r2 = ReSampler(n2, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig(), transpo, SIGSNB[5], SIGSNB[13], SIGSNB[21], channel=2, mul=MULPOW[5]).out()
-r3 = ReSampler(n1, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig(), transpo, SIGSNB[6], SIGSNB[14], SIGSNB[22], channel=1, mul=MULPOW[6]).out()
-r4 = ReSampler(n2, a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig()+r3.sig(), transpo, SIGSNB[7], SIGSNB[15], SIGSNB[23], channel=2, mul=MULPOW[7]).out()
+r1 = ReSampler(n1, [a1.sig(),a2.sig(),a3.sig(),a4.sig()], transpo, SIGSNB[4], SIGSNB[12], SIGSNB[20], mul=MULPOW[4])
+r2 = ReSampler(n1, [a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig()], transpo, SIGSNB[5], SIGSNB[13], SIGSNB[21], mul=MULPOW[5])
+r3 = ReSampler(n1, [a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig()], transpo, SIGSNB[6], SIGSNB[14], SIGSNB[22], mul=MULPOW[6])
+r4 = ReSampler(n1, [a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig()], transpo, SIGSNB[7], SIGSNB[15], SIGSNB[23], mul=MULPOW[7])
 # #Cause underrun
 
-fx = EffectBox(a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig()+r3.sig()+r4.sig(), SIGSAR, channel=10, mul=1).out()
+fx = EffectBox(a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig()+r3.sig()+r4.sig(), SIGSAR, channel=10, mul=1)
 # r1.sig()+r2.sig()+r3.sig()+r4.sig()
 
-# msg = [0, 0, pi/2.1, 0.5, .2, 0, 0]
-# sender.send(msg)
-# msg = [1, 0, pi/2, 1, 0, 0, 0]
-# sender.send(msg)
-# msg = [2, 0, pi/4, 1.5, .3, 0, 0]
-# sender.send(msg)
-# msg = [3, 0, pi/2, 1, 0, 0, 0]
-# sender.send(msg)
-# msg = [4, pi*1.55, pi/2.15, 0.5, 0.25, 0, 0]
-# sender.send(msg)
-# msg = [5, pi/2.25, pi/2.15, 0.5, 0.25, 0, 0]
-# sender.send(msg)
-# msg = [6, 0, pi/2, 1, 0, 0, 0]
-# sender.send(msg)
+gm = GestesMus(a1.sig()+a2.sig()+a3.sig()+a4.sig()+r1.sig()+r2.sig()+r3.sig()+r4.sig()+fx.sig()).out()
+
+# if s.audio == 'jack':
+msg = [0, 0, pi/2.1, 0.5, .2, 0, 0]
+sender.send(msg)
+msg = [1, 0, pi/2, 1, 0, 0, 0]
+sender.send(msg)
+msg = [2, 0, pi/4, 1.5, .3, 0, 0]
+sender.send(msg)
+msg = [3, 0, pi/2, 1, 0, 0, 0]
+sender.send(msg)
+msg = [4, pi*1.55, pi/2.15, 0.5, 0.25, 0, 0]
+sender.send(msg)
+msg = [5, pi/2.25, pi/2.15, 0.5, 0.25, 0, 0]
+sender.send(msg)
+msg = [6, 0, pi/2, 1, 0, 0, 0]
+sender.send(msg)
 
 s.gui(locals())
