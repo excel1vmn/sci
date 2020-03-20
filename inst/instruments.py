@@ -281,12 +281,13 @@ class Drums:
 
 class ReSampler:
     def __init__(self, noteinput, input, transpo=1, hfdamp=7000, cs1=0, cs2=0, cs3=0, mul=1):
+        self.note = noteinput
+        self.input = Mix(input, voices=2)
         self.transpo = Sig(transpo)
         self.cs1 = cs1
         self.cs2 = cs2
         self.cs3 = cs3
 
-        self.note = noteinput
         self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.2)
@@ -294,21 +295,6 @@ class ReSampler:
         self.valVel = SigTo(self.note['velocity'], .01)
         self.tabLenght = sampsToSec(48000)
 
-        # if type(input) is list:
-        #     self.input = []
-        #     self.nt = []
-        #     self.tr = []
-        #     for i in range(len(input)):
-        #         self.input.append(input[i])
-        #         self.nt.append(NewTable(length=self.tabLenght, chnls=2, feedback=0))
-        #         self.tr.append(TableRec(self.input[i], table=self.nt[i], fadetime=.01))
-
-        #     self.morphSine = FastSine((self.cs2+.1)*4, mul=.5*self.cs2, add=.5)
-        #     self.tm = NewTable(length=self.tabLenght, chnls=2, feedback=0)
-        #     self.tf = TableMorph(self.morphSine, self.tm, self.nt)
-        #     self.c = OscTrig(self.tm, self.note['trigon'], self.tm.getRate() * self.tra, mul=self.amp).mix(2)
-        # else:
-        self.input = input
         self.nt = NewTable(length=self.tabLenght, chnls=1, feedback=0)
         self.tr = TableRec(self.input, table=self.nt, fadetime=.001)
         self.c = OscTrig(self.nt, self.note['trigon'], self.nt.getRate() * self.tra, mul=self.amp).mix(2)
@@ -355,7 +341,7 @@ class ReSampler:
 
 class EffectBox:
     def __init__(self, input, cs, channel=1, mul=1):
-        self.input = input
+        self.input = Mix(input, voices=2)
         self.cs = cs
         self.fx = []
 
