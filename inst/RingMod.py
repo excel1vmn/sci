@@ -2,11 +2,13 @@
 # encoding: utf-8
 from pyo import *
 
-class GestesMus(PyoObject):
+class RingMod(PyoObject):
     """
-    Gestes Musicales
+    Ring modulator.
 
-    Descriptions à écrire...
+    Ring modulation is a signal-processing effect in electronics
+    performed by multiplying two signals, where one is typically
+    a sine-wave or another simple waveform.
 
     :Parent: :py:class:`PyoObject`
 
@@ -14,8 +16,15 @@ class GestesMus(PyoObject):
 
         input : PyoObject
             Input signal to process.
-        *args : 
+        freq : float or PyoObject, optional
+            Frequency, in cycles per second, of the modulator.
+            Defaults to 100.
 
+    >>> s = Server().boot()
+    >>> s.start()
+    >>> src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
+    >>> lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
+    >>> ring = RingMod(src, freq=[800,1000], mul=lfo).out()
 
     """
     def __init__(self, input, freq=100, mul=1, add=0):
@@ -24,11 +33,9 @@ class GestesMus(PyoObject):
         self._freq = freq
         self._in_fader = InputFader(input)
         in_fader,freq,mul,add,lmax = convertArgsToLists(self._in_fader,freq,mul,add)
-        # self._lfo = FastSine(freq=[.3,.4,.5,.6], mul=.5, add=add)
-        # self._mod = MultiBand(self._input, num=4)
         self._mod = Sine(freq=freq, mul=in_fader)
-        self._out = Sig(self._mod, mul=mul, add=add)
-        self._base_objs = self._out.getBaseObjects()
+        self._ring = Sig(self._mod, mul=mul, add=add)
+        self._base_objs = self._ring.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
         """
@@ -90,3 +97,13 @@ class GestesMus(PyoObject):
     @freq.setter
     def freq(self, x):
         self.setFreq(x)
+
+# Run the script to test the RingMod object.
+if __name__ == "__main__":
+    s = Server()
+    s.setOutputDevice(6)
+    s.boot().start()
+    src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
+    lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
+    ring = RingMod(src, freq=[800,1000], mul=lfo).out()
+    s.gui(locals())
