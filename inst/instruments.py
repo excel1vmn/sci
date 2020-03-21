@@ -249,9 +249,9 @@ class WaveShape:
 
 class Drums:
     def __init__(self, paths, noteinput, transpo=1, hfdamp=7000, lfofreq=0.2, mul=1):
-        self.transpo = Sig(transpo)
         self.paths = paths
         self.note = noteinput
+        self.transpo = Sig(transpo)
         self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
@@ -263,10 +263,10 @@ class Drums:
         for i in range(len(self.paths)):
             self.tables.append(SndTable(self.paths[i], initchnls=2))
             self.selectors.append(Select(self.note["pitch"], value=36+i))
-            self.players.append(TrigEnv(self.selectors[i], self.tables[i], dur=self.tables[i].getDur() / self.transpo, mul=self.amp.mix(2)))
+            self.players.append(TrigEnv(self.selectors[i], self.tables[i], dur=self.tables[i].getDur()/self.transpo, mul=self.amp.mix(1)))
 
         # Stereo mix.
-        self.mix = Mix(self.players, voices=16)
+        self.mix = Mix(self.players, voices=2)
         self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
         self.hp = ButHP(self.damp, 50).mix(2)
         self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
@@ -295,7 +295,7 @@ class ReSampler:
         self.valVel = SigTo(self.note['velocity'], .01)
         self.tabLenght = sampsToSec(48000)
 
-        self.nt = NewTable(length=self.tabLenght, chnls=1, feedback=0)
+        self.nt = NewTable(length=self.tabLenght, chnls=2, feedback=0)
         self.tr = TableRec(self.input, table=self.nt, fadetime=.001)
         self.c = OscTrig(self.nt, self.note['trigon'], self.nt.getRate() * self.tra, mul=self.amp).mix(2)
         
@@ -309,7 +309,7 @@ class ReSampler:
         self.dist = Disto(self.c, drive=self.trMod, slope=self.trMod, mul=self.cs1*4).mix(2)
         # self.fmDist = Disto(self.c, drive=self.fm, slope=1).mix(2)
         self.damp = ButLP(self.c+self.dist, freq=hfdamp).mix(2)
-        self.refSine = FastSine(freq=100, mul=.05)        
+        self.refSine = FastSine(freq=400, mul=1)        
         self.bal = Balance(self.damp, self.refSine, freq=20).mix(2)
         self.comp = Compress(self.bal, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
         self.p = Pan(self.comp, outs=2, pan=self.fs1, spread=self.valVel, mul=mul)

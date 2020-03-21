@@ -8,8 +8,8 @@ import math
 import os, sys
 
 # SERVER SETUP
-# s = Server(sr=48000, duplex=0, audio='pa')
-# s.setInOutDevice(16)
+# s = Server(sr=48000, duplex=0)
+# s.setOutputDevice(16)
 s = Server(sr=48000, duplex=0, audio='pa')
 s.setInOutDevice(6)
 # LINUX AUDIO/MIDI CONFIG
@@ -19,7 +19,7 @@ s.setMidiOutputDevice(99)
 pm_list_devices()
 
 s.boot().start()
-s.amp = .1
+s.amp = .125
 
 dir = r'/home/charlieb/sci'
 os.chdir(dir)
@@ -221,26 +221,26 @@ n2 = Notein(poly=10, scale=0, first=0, last=127, channel=2)
 n3 = Notein(poly=10, scale=0, first=0, last=127, channel=3)
 n10 = Notein(poly=16, scale=0, first=0, last=127, channel=10)
 
-a1 = Synth(n1, transpo, hfdamp, lfofreq, SIGSNB[0], SIGSNB[8], SIGSNB[16], mul=MULPOW[0]).out()
-a2 = FreakSynth(n1, transpo, hfdamp, lfofreq, SIGSNB[1], SIGSNB[9], SIGSNB[17], mul=MULPOW[1]).out()
-a3 = Simpler(n1, snds[1], transpo, hfdamp, lfofreq, SIGSNB[2], SIGSNB[10], SIGSNB[18], mul=MULPOW[2]).out()
-a4 = WaveShape(n1, snds[9], transpo, hfdamp, lfofreq, SIGSNB[3], SIGSNB[11], SIGSNB[19], mul=MULPOW[3]).out()
+a1 = Synth(n1, transpo, hfdamp, lfofreq, SIGSNB[0], SIGSNB[8], SIGSNB[16], mul=MULPOW[0])
+a2 = FreakSynth(n1, transpo, hfdamp, lfofreq, SIGSNB[1], SIGSNB[9], SIGSNB[17], mul=MULPOW[1])
+a3 = Simpler(n1, snds[1], transpo, hfdamp, lfofreq, SIGSNB[2], SIGSNB[10], SIGSNB[18], mul=MULPOW[2])
+a4 = WaveShape(n1, snds[9], transpo, hfdamp, lfofreq, SIGSNB[3], SIGSNB[11], SIGSNB[19], mul=MULPOW[3])
 
 # p1 = Pads(sndsSB[6], transpo, hfdamp, channel=10)
-# d1 = Drums(kicks, n10, transpo, hfdamp, mul=1)
+# d1 = Drums(kicks, n10, transpo, hfdamp, mul=1).out()
 
 #Cause underrun
-r1 = ReSampler(n1, [a1.sig(), a2.sig(), a3.sig(), a4.sig()], transpo, hfdamp, SIGSNB[4], SIGSNB[12], SIGSNB[20], mul=MULPOW[4]).out()
-r2 = ReSampler(n1, [a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig()], transpo, hfdamp, SIGSNB[5], SIGSNB[13], SIGSNB[21], mul=MULPOW[5]).out()
-r3 = ReSampler(n1, [a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig()], transpo, hfdamp, SIGSNB[6], SIGSNB[14], SIGSNB[22], mul=MULPOW[6]).out()
-r4 = ReSampler(n1, [a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig()], transpo, hfdamp, SIGSNB[7], SIGSNB[15], SIGSNB[23], mul=MULPOW[7]).out()
+r1 = ReSampler(n1, [a1.sig(), a2.sig(), a3.sig(), a4.sig()], transpo, hfdamp, SIGSNB[4], SIGSNB[12], SIGSNB[20], mul=MULPOW[4])
+r2 = ReSampler(n1, [a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig()], transpo, hfdamp, SIGSNB[5], SIGSNB[13], SIGSNB[21], mul=MULPOW[5])
+r3 = ReSampler(n1, [a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig()], transpo, hfdamp, SIGSNB[6], SIGSNB[14], SIGSNB[22], mul=MULPOW[6])
+r4 = ReSampler(n1, [a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig()], transpo, hfdamp, SIGSNB[7], SIGSNB[15], SIGSNB[23], mul=MULPOW[7])
 # #Cause underrun
 
-fx = EffectBox([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig(), r4.sig()], SIGSAR, channel=10, mul=8).out()
+fx = EffectBox([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig(), r4.sig()], SIGSAR, channel=10, mul=8)
 
-# gm = GestesMus([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig(), r4.sig(), fx.sig()]).out()
+gm = GestesMus(Mix([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig(), r4.sig(), fx.sig()], voices=2)).out()
 
-# rm = RingMod(a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig(), r4.sig(), fx.sig()).mix(2).out()
+# rm = RingMod(Mix([a1.sig(), a2.sig(), a3.sig(), a4.sig(), r1.sig(), r2.sig(), r3.sig(), r4.sig(), fx.sig()], voices=2)).out()
 
 # if s.audio == 'jack':
 msg = [0, 0, pi/2.1, 0.5, .2, 0, 0]
