@@ -18,16 +18,19 @@ class GestesMus(PyoObject):
 
 
     """
-    def __init__(self, input, freq=100, mul=1, add=0):
+    def __init__(self, input, cs, freq=100, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
+        self._cs = cs
         self._freq = freq
         self._in_fader = InputFader(input)
-        in_fader,freq,mul,add,lmax = convertArgsToLists(self._in_fader,freq,mul,add)
-        # self._lfo = FastSine(freq=[.3,.4,.5,.6], mul=.5, add=add)
-        # self._mod = MultiBand(self._input, num=4)
-        self._mod = Sine(freq=freq, mul=in_fader)
-        self._out = Sig(self._mod, mul=mul, add=add)
+        in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
+        self._lfo = FastSine(freq=[cs[0]*3,cs[0]*5,cs[0]*8,cs[0]*11], mul=.9*Pow(cs[0],3), add=.1)
+        self._mod = MultiBand(in_fader, num=4, mul=self._lfo)
+        self._dis = Disto(self._mod, drive=(.95*Pow(cs[0],3)), slope=.7)
+        self._comp = Compress(self._dis, thresh=-20, ratio=6, knee=0.5)
+        self._pan = Pan(self._comp, outs=outs, pan=.5+((in_fader*cs[3])), spread=.3)
+        self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
