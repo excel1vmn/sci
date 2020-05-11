@@ -25,12 +25,13 @@ class GestesMus(PyoObject):
         self._freq = freq
         self._in_fader = InputFader(input)
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
-        self._lfo = FastSine(freq=[cs[0]*3,cs[0]*5,cs[0]*8,cs[0]*11], mul=.9*Pow(cs[0],3), add=.1)
+        self._rdur = RandDur(min=[.1,.3,.5,.7], max=[3,7,11,15])
+        self._lfo = FastSine(freq=[cs[0]*self._rdur[0],cs[0]*self._rdur[1],cs[0]*self._rdur[2],cs[0]*self._rdur[3]], mul=.9*Pow(cs[0],3), add=.1)
         self._mod = MultiBand(in_fader, num=4, mul=self._lfo)
-        self._dis = Disto(self._mod, drive=(.95*Pow(cs[0],3)), slope=.7)
-        self._comp = Compress(self._dis, thresh=-20, ratio=6, knee=0.5)
-        self._pan = Pan(self._comp, outs=outs, pan=.5+((in_fader*cs[3])), spread=.3)
-        self._out = Sig(self._pan, mul=mul, add=add)
+        self._dis = Disto(self._mod, drive=(.98*Pow(cs[0],3)), slope=.7, mul=cs[0]*.2)
+        self._pan = Pan(self._mod, outs=outs, pan=in_fader*cs[3], spread=.3, mul=in_fader*cs[3])
+        self._comp = Compress(Mix([self._mod,self._dis,self._pan], 2), thresh=-20, ratio=4, knee=0.5)
+        self._out = Sig(self._comp, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
