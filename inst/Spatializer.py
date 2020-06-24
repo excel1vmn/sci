@@ -2,39 +2,43 @@
 # encoding: utf-8
 from pyo import *
 
-class GestesMus(PyoObject):
+class Spatializer(PyoObject):
     """
-    Gestes Musicales
+    Pyo Object Template.
 
-    Descriptions à écrire...
+    Description of your pyo object class and it's diverse use cases.
 
     :Parent: :py:class:`PyoObject`
 
-    :Args:
+    :Args: List of arguments and their description
 
         input : PyoObject
             Input signal to process.
-        *args : 
+        freq : float or PyoObject, optional
+            Frequency, in cycles per second, of the modulator.
+            Defaults to 100.
+        ctrlIN : 
 
+        chaos : 
+
+    >>> s = Server().boot()
+    >>> s.start()
+    >>> src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
+    >>> lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
+    >>> pot = PyoObjectTemplate(src, freq=[800,1000], mul=lfo).out()
 
     """
-    def __init__(self, input, cs, freq=100, outs=2, mul=1, add=0):
+    def __init__(self, input, freq=100, ctrl=[.1,.1,.1,.1], chaos=0, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._cs = cs
         self._freq = freq
-        self._outs = outs
+        self._ctrl = ctrl
+        self._chaos = chaos
         self._in_fader = InputFader(input)
-        in_fader,cs,freq,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,outs,mul,add)
-        print(freq)
-        self._rdur = RandDur(min=freq, max=freq*100)
-        self._lfo = FastSine(freq=[cs[0]*self._rdur[0],cs[0]*self._rdur[1],cs[0]*self._rdur[2],cs[0]*self._rdur[3]], mul=.9*Pow(cs[0],3), add=.1)
-        self._mod = MultiBand(in_fader, num=4, mul=self._lfo)
-        self._dis = Disto(self._mod, drive=(.98*Pow(cs[0],3)), slope=self._lfo, mul=cs[0]*.2)
-        self._pan = Pan(self._mod, outs=outs[0], pan=in_fader*cs[3], spread=.3, mul=in_fader*cs[3])
-        self._comp = Compress(Mix([self._mod,self._dis,self._pan], outs[0]), thresh=-20, ratio=4, knee=0.5)
-        self._out = Sig(self._comp, mul=mul, add=add)
-        self._base_objs = self._out.getBaseObjects()
+        in_fader,freq,ctrl,chaos,outs,mul,add,lmax = convertArgsToLists(self._in_fader,freq,ctrl,chaos,outs,mul,add)
+        self._mod = Sine(freq=freq, mul=in_fader)
+        self._pot = Sig(self._mod, mul=mul, add=add)
+        self._base_objs = self._pot.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
         """
@@ -96,3 +100,13 @@ class GestesMus(PyoObject):
     @freq.setter
     def freq(self, x):
         self.setFreq(x)
+
+# Run the script to test the Spatializer object.
+if __name__ == "__main__":
+    s = Server()
+    s.setOutputDevice(6)
+    s.boot().start()
+    src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
+    lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
+    pot = Spatializer(src, freq=[800,1000], mul=lfo).out()
+    s.gui(locals())

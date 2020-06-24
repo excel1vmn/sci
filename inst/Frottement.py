@@ -2,9 +2,9 @@
 # encoding: utf-8
 from pyo import *
 
-class GestesMus(PyoObject):
+class Frottement(PyoObject):
     """
-    Gestes Musicales
+    Frottement comme gestes musicales
 
     Descriptions à écrire...
 
@@ -16,7 +16,6 @@ class GestesMus(PyoObject):
             Input signal to process.
         *args : 
 
-
     """
     def __init__(self, input, cs, freq=100, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
@@ -26,13 +25,22 @@ class GestesMus(PyoObject):
         self._outs = outs
         self._in_fader = InputFader(input)
         in_fader,cs,freq,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,outs,mul,add)
-        print(freq)
+        self._numINs = len(in_fader)
         self._rdur = RandDur(min=freq, max=freq*100)
-        self._lfo = FastSine(freq=[cs[0]*self._rdur[0],cs[0]*self._rdur[1],cs[0]*self._rdur[2],cs[0]*self._rdur[3]], mul=.9*Pow(cs[0],3), add=.1)
-        self._mod = MultiBand(in_fader, num=4, mul=self._lfo)
-        self._dis = Disto(self._mod, drive=(.98*Pow(cs[0],3)), slope=self._lfo, mul=cs[0]*.2)
-        self._pan = Pan(self._mod, outs=outs[0], pan=in_fader*cs[3], spread=.3, mul=in_fader*cs[3])
-        self._comp = Compress(Mix([self._mod,self._dis,self._pan], outs[0]), thresh=-20, ratio=4, knee=0.5)
+        if type(freq) is list:
+            self._lfoFreq = []
+            for i in range(len(freq)):
+                self._lfoFreq.append(cs[0]*self._rdur[i]*i)
+            self._lfo = FastSine(freq=self._lfoFreq, mul=1*Pow(cs[0],3), add=1)
+            self._mod = MultiBand(in_fader, num=len(freq), mul=self._lfo)
+            print('is list')
+        else:
+            self._lfo = FastSine(freq=cs[0]*self._rdur[0], mul=.9*Pow(cs[0],3), add=.1)
+            self._mod = MultiBand(in_fader, num=4, mul=self._lfo)
+            print('is not list')
+        self._dis = Disto(self._mod, drive=(.98*Pow(cs[0],3)), slope=self._lfo, mul=cs[0]*.7)
+        self._pan = Pan(self._mod, outs=outs[0], pan=in_fader*cs[1], spread=.3, mul=in_fader*cs[1])
+        self._comp = Compress(Mix([self._mod,self._dis,self._pan]), thresh=-20, ratio=4, knee=0.5)
         self._out = Sig(self._comp, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
@@ -96,3 +104,14 @@ class GestesMus(PyoObject):
     @freq.setter
     def freq(self, x):
         self.setFreq(x)
+
+if __name__ == "__main__":
+    s = Server()
+    s.setOutputDevice(6)
+    s.setMidiInputDevice(99)
+    s.boot().start()
+    src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
+    lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
+    cs = Midictl(ctlnumber=[53,56], init=0, channel=6)
+    pot = Frottement(src, freq=[.1,.3,.5,9], cs=[cs[0],cs[1]], mul=lfo).out()
+    s.gui(locals())
