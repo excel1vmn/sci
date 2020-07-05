@@ -2,47 +2,43 @@
 # encoding: utf-8
 from pyo import *
 
-class Frottement(PyoObject):
+class InfluencedRhythmGenerator(PyoObject):
     """
-    Frottement comme gestes musicales
+    Pyo Object Template.
 
-    Descriptions à écrire...
+    Description of your pyo object class and it's diverse use cases.
 
     :Parent: :py:class:`PyoObject`
 
-    :Args:
+    :Args: List of arguments and their description
 
         input : PyoObject
             Input signal to process.
-        *args : 
+        freq : float or PyoObject, optional
+            Frequency, in cycles per second, of the modulator.
+            Defaults to 100.
+        ctrlIN : 
+
+        chaos : 
+
+    >>> s = Server().boot()
+    >>> s.start()
+    >>> src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
+    >>> lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
+    >>> pot = PyoObjectTemplate(src, freq=[800,1000], mul=lfo).out()
 
     """
-    def __init__(self, input, cs, freq=100, outs=2, mul=1, add=0):
+    def __init__(self, input, freq=100, ctrl=[.1,.1,.1,.1], chaos=0, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._cs = cs
         self._freq = freq
-        self._outs = outs
+        self._ctrl = ctrl
+        self._chaos = chaos
         self._in_fader = InputFader(input)
-        in_fader,cs,freq,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,outs,mul,add)
-        self._numINs = len(in_fader)
-        self._rdur = RandDur(min=freq, max=freq*100)
-        if type(freq) is list:
-            self._lfoFreq = []
-            for i in range(len(freq)):
-                self._lfoFreq.append(cs[0]*self._rdur[i]*i)
-            self._lfo = FastSine(freq=self._lfoFreq, mul=1*Pow(cs[0],3), add=1)
-            self._mod = MultiBand(in_fader, num=len(freq), mul=self._lfo)
-            print('is list')
-        else:
-            self._lfo = FastSine(freq=cs[0]*self._rdur[0], mul=.9*Pow(cs[0],3), add=.1)
-            self._mod = MultiBand(in_fader, num=4, mul=self._lfo)
-            print('is not list')
-        self._dis = Disto(self._mod, drive=(.98*Pow(cs[0],3)), slope=self._lfo, mul=cs[0]*.7)
-        self._pan = Pan(self._mod, outs=outs[0], pan=in_fader*cs[0], spread=.3, mul=in_fader*cs[0])
-        self._comp = Compress(Mix([self._mod,self._dis,self._pan]), thresh=-20, ratio=4, knee=0.5)
-        self._out = Sig(self._comp, mul=mul, add=add)
-        self._base_objs = self._out.getBaseObjects()
+        in_fader,freq,ctrl,chaos,outs,mul,add,lmax = convertArgsToLists(self._in_fader,freq,ctrl,chaos,outs,mul,add)
+        self._mod = Sine(freq=freq, mul=in_fader)
+        self._pot = Sig(self._mod, mul=mul, add=add)
+        self._base_objs = self._pot.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
         """
@@ -105,13 +101,12 @@ class Frottement(PyoObject):
     def freq(self, x):
         self.setFreq(x)
 
+# Run the script to test the InfluencedRhythmGenerator object.
 if __name__ == "__main__":
     s = Server()
     s.setOutputDevice(6)
-    s.setMidiInputDevice(99)
     s.boot().start()
     src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
     lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
-    cs = Midictl(ctlnumber=[53,56], init=0, channel=6)
-    pot = Frottement(src, freq=[.1,.3,.5,9], cs=[cs[0],cs[1]], mul=lfo).out()
+    pot = InfluencedRhythmGenerator(src, freq=[800,1000], outs=8, mul=lfo).out()
     s.gui(locals())

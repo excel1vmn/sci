@@ -353,9 +353,8 @@ class Drums:
 
 class ReSampler:
     def __init__(self, noteinput, audioREC, trig, toggles, cs, transpo=1, hfdamp=7000, audioIN=0, mul=1):
-        # self.deNorm = Noise(1e-24)
         self.note = noteinput
-        self.audioREC = Mix(audioREC, voices=2)
+        self.audioREC = Sig(audioREC)
         self.audioIN = Sig(audioIN)
         self.trig = trig
         self.toggles = toggles
@@ -385,7 +384,8 @@ class ReSampler:
         self.trigToggles = TrigFunc(self.check, self.toggleFX)
         
         # ADD RANDOMIZER ELEMENTS
-        self.pitch1 = Choice(choice=[.25,.5,.75,1,1.25,1.5,1.75], freq=self.trMod).stop()
+        self.randPitchs = [.25,.5,.75,1,1.25,1.5,1.75]
+        self.pitch1 = Choice(choice=self.randPitchs, freq=self.trMod).stop()
         self.pitch2 = Sig(self.tra)
         self.start = Phasor(freq=.2, mul=self.nt.getDur()-(self.nt.getDur()*1-self.toggles[1]))
         self.dur1 = Choice(choice=[.0625,.125,.125,.25,.33], freq=4)
@@ -460,6 +460,10 @@ class ReSampler:
 
         if Sig(self.toggles[1]).get() == 1:
             print('on 2')
+            for i in range(len(self.randPitchs)):
+                self.randPitchs.pop(i)
+                self.randPitchs.insert(i, random.uniform(.1,2))
+            print(self.randPitchs)
             self.pitch1.play()
             self.pitch2.stop()
             self.dur1.play()

@@ -108,5 +108,5 @@ if __name__ == "__main__":
     s.boot().start()
     src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
     lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
-    pot = Spatializer(src, freq=[800,1000], mul=lfo).out()
+    pot = Spatializer(src, freq=[800,1000], outs=8, mul=lfo).out()
     s.gui(locals())

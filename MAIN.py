@@ -18,11 +18,11 @@ if NUM_OUTS == 2:
         s.setInOutDevice(6)
         print('EXT')
     else:
-        s = Server(sr=48000, nchnls=NUM_OUTS, duplex=0, audio='pa')
+        s = Server(sr=48000, buffersize=512, nchnls=NUM_OUTS, duplex=0, audio='pa')
         s.setOutputDevice(17)
         print('INT')
 else:
-    s = Server(sr=48000, nchnls=NUM_OUTS, duplex=1, audio='jack')
+    s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=1, audio='jack')
     s.setInOutDevice(6)
     print('JACK')
 
@@ -70,7 +70,7 @@ for names in itemK:
 
 def ctl_scan(ctlnum, midichnl):
     print(ctlnum, midichnl)
-ctlscan = CtlScan2(ctl_scan, False)
+ctlscan = CtlScan2(ctl_scan, True)
 
 # MULPOW = Pow(Midictl(ctlnumber=[0,1,2,3,4,5,6,7], init=0, channel=1), 3)
 # SIGSNB = Midictl(ctlnumber=[8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31], init=0, channel=1)
@@ -110,13 +110,10 @@ a1 = Synth(n2, trigs[0], toggles1, [SIGSNB[0],SIGSNB[8]], transpo, hfdamp, lfofr
 a2 = FreakSynth(n2, trigs[1], toggles2, [SIGSNB[1],SIGSNB[9]], transpo, hfdamp, lfofreq, drums.sig(), mul=MULPOW[1])
 a3 = Simpler(n3, snds, trigs[2], toggles3, [SIGSNB[2],SIGSNB[10]], transpo, hfdamp, lfofreq,  False, False, drums.sig(), mul=MULPOW[2])
 a4 = WaveShape(n3, snds[9], trigs[3], toggles4, [SIGSNB[3],SIGSNB[11]], transpo, hfdamp, lfofreq, drums.sig(), mul=MULPOW[3])
-
-#Cause underrun
 r1 = ReSampler(n4, [a1.sig(),a2.sig(),a3.sig(),a4.sig(),drums.sig()], trigs[4], toggles5, [SIGSNB[4],SIGSNB[12]], transpo, hfdamp, drums.sig(), mul=MULPOW[4])
 r2 = ReSampler(n4, [a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),drums.sig()], trigs[5], toggles6, [SIGSNB[5],SIGSNB[13]], transpo, hfdamp, drums.sig(), mul=MULPOW[5])
 r3 = ReSampler(n4, [a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),drums.sig()], trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, hfdamp, drums.sig(), mul=MULPOW[6])
 r4 = ReSampler(n4, [a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()], trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, hfdamp, drums.sig(), mul=MULPOW[7])
-# #Cause underrun
 
 fx = EffectBox(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()]), [SIGSNB[16],SIGSNB[17],SIGSNB[18]], channel=10, mul=2)
 
