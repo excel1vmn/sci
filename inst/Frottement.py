@@ -31,7 +31,7 @@ class Frottement(PyoObject):
             self._lfoFreq = []
             for i in range(len(freq)):
                 self._lfoFreq.append(cs[0]*self._rdur[i]*i)
-            self._lfo = FastSine(freq=self._lfoFreq, mul=1*Pow(cs[0],3), add=1)
+            self._lfo = FastSine(freq=self._lfoFreq, mul=1*Pow(cs[0],3))
             self._mod = MultiBand(in_fader, num=len(freq), mul=self._lfo)
             print('is list')
         else:
