@@ -25,7 +25,7 @@ class Accumulation(PyoObject):
         self._outs = outs
         self._in_fader = InputFader(input)
         in_fader,cs,delay,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,delay,outs,mul,add)      
-        self._onesample = 1.0 / 48000
+        self._onesample = 1.0 / 48000   
         self._check = Change(cs[0])
         self._fade = TrigLinseg(self._check, [(.01,1),(.5,.7),(1,0)])
         self._rand = SigTo(RandDur(min=[self._onesample,self._onesample*1.04,self._onesample*1.09,self._onesample*1.13],max=[.31,.33,.36,.4], mul=self._fade))

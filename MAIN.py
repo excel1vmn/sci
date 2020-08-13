@@ -12,7 +12,7 @@ import threading
 import keyboard
 
 NUM_OUTS = 2
-SOUND_CARD = 'EXT'
+SOUND_CARD = 'INT'
 
 # SERVER SETUP
 if NUM_OUTS == 2:
@@ -22,7 +22,7 @@ if NUM_OUTS == 2:
         print('EXT')
     else:
         s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=0, audio='pa')
-        s.setOutputDevice(17)
+        s.setOutputDevice(0)
         print('INT')
 else:
     s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=1, audio='jack')
