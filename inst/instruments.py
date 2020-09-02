@@ -489,10 +489,23 @@ class ReSampler:
             print('off 3')
 
 class EffectBox:
-    def __init__(self, input, cs, channel=1, mul=1):
-        self.input = Mix(input, voices=2)
+    def __init__(self, input, toggles, cs, channel=1, mul=1):
+        # self.input = Mix(input, voices=2)
+        self.input = input
+        self.toggles = toggles
         self.cs = cs
         self.fx = []
+
+        self.check = Change(self.toggles)
+        self.trigToggles = TrigFunc(self.check, self.toggleFX)
+
+        self.mixer = Mixer(outs=9, chnls=2)
+        for i in range(9):
+            self.mixer.addInput(i, self.input[i])
+            self.mixer.setAmp(i,i,0)
+            self.mixer.setAmp(i,i+1,0)
+
+        self.downmix = Mix(self.mixer)
 
         # TRANSFER FUNCTION
         # self.table = ExpTable([(0,-.25),(4096,0),(8192,0)], exp=30)
@@ -508,12 +521,10 @@ class EffectBox:
         # self.mixed = Interp(self.mix, self.lp, interp=0)
         # TRANSFER FUNCTION
 
-        self.fx.append(Disto(self.input, drive=.95, slope=.8, mul=Pow(self.cs[0]*8,3)))
-        self.fx.append(FreqShift(Mix(self.input+self.fx[0]), shift=10*((self.fx[0]*.2)+1), mul=Pow(self.cs[1]*8,3)))
-        self.pva = PVAnal(self.input+self.fx, size=4096)
-        self.pvg = PVGate(self.pva, thresh=-36, damp=0)
-        self.pvv = PVVerb(self.pvg, revtime=.90, damp=.90)
-        self.fx.append(PVSynth(self.pvv, mul=Pow(self.cs[2],3)))
+        self.fx.append(Disto(self.downmix, drive=.95, slope=.8, mul=Pow(self.cs[0]*10,3)))
+        self.fx.append(FreqShift(Mix(self.downmix+self.fx[0]), shift=10*((self.fx[0]*.2)+1), mul=Pow(self.cs[1]*10,3)))
+        self.fx.append(WGVerb(self.downmix, feedback=[.74,.75], cutoff=5000, bal=1, mul=Pow(self.cs[2]*10,3)))
+        self.fx.append(MoogLP(self.downmix, 12000*(self.cs[3]+.001), res=0, mul=Pow(self.cs[3]*10,3)))
 
         self.mix = Mix(self.fx, voices=2)
         self.comp = Compress(Mix(self.fx, voices=2), thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
@@ -526,3 +537,60 @@ class EffectBox:
     def sig(self):
         return self.p
         
+    def toggleFX(self):
+        if Sig(self.toggles[0]).get() == 1:
+            self.mixer.setAmp(0,0,1)
+            self.mixer.setAmp(0,1,1)
+            print('sup')
+        else:
+            self.mixer.setAmp(0,0,0)
+            self.mixer.setAmp(0,1,0)
+
+        if Sig(self.toggles[1]).get() == 1:
+            self.mixer.setAmp(1,0,1)
+            self.mixer.setAmp(1,1,1)
+        else:
+            self.mixer.setAmp(1,0,0)
+            self.mixer.setAmp(1,1,0)
+
+        if Sig(self.toggles[2]).get() == 1:
+            self.mixer.setAmp(2,0,1)
+            self.mixer.setAmp(2,1,1)
+        else:
+            self.mixer.setAmp(2,0,0)
+            self.mixer.setAmp(2,1,0)
+
+        if Sig(self.toggles[3]).get() == 1:
+            self.mixer.setAmp(3,0,1)
+            self.mixer.setAmp(3,1,1)
+        else:
+            self.mixer.setAmp(3,0,0)
+            self.mixer.setAmp(3,1,0)
+
+        if Sig(self.toggles[4]).get() == 1:
+            self.mixer.setAmp(4,0,1)
+            self.mixer.setAmp(4,1,1)
+        else:
+            self.mixer.setAmp(4,0,0)
+            self.mixer.setAmp(4,1,0)
+
+        if Sig(self.toggles[5]).get() == 1:
+            self.mixer.setAmp(5,0,1)
+            self.mixer.setAmp(5,1,1)
+        else:
+            self.mixer.setAmp(5,0,0)
+            self.mixer.setAmp(5,1,0)
+
+        if Sig(self.toggles[6]).get() == 1:
+            self.mixer.setAmp(6,0,1)
+            self.mixer.setAmp(6,1,1)
+        else:
+            self.mixer.setAmp(6,0,0)
+            self.mixer.setAmp(6,1,0)
+
+        if Sig(self.toggles[7]).get() == 1:
+            self.mixer.setAmp(7,0,1)
+            self.mixer.setAmp(7,1,1)
+        else:
+            self.mixer.setAmp(7,0,0)
+            self.mixer.setAmp(7,1,0)

@@ -9,20 +9,20 @@ from gridHandler import *
 import math
 import os, sys
 import threading
-import keyboard
+# import keyboard
 
 NUM_OUTS = 2
-SOUND_CARD = 'INT'
+SOUND_CARD = 'EXT'
 
 # SERVER SETUP
 if NUM_OUTS == 2:
     if SOUND_CARD == 'EXT':
         s = Server(sr=48000, nchnls=NUM_OUTS, duplex=1, audio='pa')
-        s.setInOutDevice(6)
+        s.setInOutDevice(1)
         print('EXT')
     else:
         s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=0, audio='pa')
-        s.setOutputDevice(0)
+        s.setOutputDevice(1)
         print('INT')
 else:
     s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=1, audio='jack')
@@ -60,11 +60,11 @@ for names in items:
 #     if names.endswith(".aif") | names.endswith(".wav"):
 #         sndsSB.append("sndsSB/" + names)
 
-itemK = os.listdir("kicks")
-kicks = []
-for names in itemK:
-    if names.endswith(".aif") | names.endswith(".wav"):
-        kicks.append("kicks/" + names)
+# itemK = os.listdir("kicks")
+# kicks = []
+# for names in itemK:
+#     if names.endswith(".aif") | names.endswith(".wav"):
+#         kicks.append("kicks/" + names)
 
 # print(snds)
 # print(sndsDrums)
@@ -92,14 +92,15 @@ hfdamp = Midictl(ctlnumber=52, minscale=20, maxscale=7000, init=7000, channel=6)
 lfofreq = Midictl(ctlnumber=13, minscale=0.1, maxscale=20, init=0.2, channel=6)
 # Toggles certain parameters of ReSampler class instruments 
 trigs = Midictl(ctlnumber=[0,1,2,3,4,5,6,7], channel=3)
-toggles1 = Midictl(ctlnumber=[ 8,16,24], channel=3)
-toggles2 = Midictl(ctlnumber=[ 9,17,25], channel=3)
-toggles3 = Midictl(ctlnumber=[10,18,26], channel=3)
-toggles4 = Midictl(ctlnumber=[11,19,27], channel=3)
-toggles5 = Midictl(ctlnumber=[12,20,28], channel=3)
-toggles6 = Midictl(ctlnumber=[13,21,29], channel=3)
-toggles7 = Midictl(ctlnumber=[14,22,30], channel=3)
-toggles8 = Midictl(ctlnumber=[15,23,31], channel=3)
+toggles1 = Midictl(ctlnumber=[ 8,16], channel=3)
+toggles2 = Midictl(ctlnumber=[ 9,17], channel=3)
+toggles3 = Midictl(ctlnumber=[10,18], channel=3)
+toggles4 = Midictl(ctlnumber=[11,19], channel=3)
+toggles5 = Midictl(ctlnumber=[12,20], channel=3)
+toggles6 = Midictl(ctlnumber=[13,21], channel=3)
+toggles7 = Midictl(ctlnumber=[14,22], channel=3)
+toggles8 = Midictl(ctlnumber=[15,23], channel=3)
+fxtoggles = Midictl(ctlnumber=[24,25,26,27,28,29,30,31], channel=3)
 drumsCS = Midictl(ctlnumber=[32,33,34,35], channel=3)
 
 n1 = Notein(poly=10, scale=0, first=0, last=127, channel=1)
@@ -111,7 +112,7 @@ n10 = Notein(poly=24, scale=0, first=0, last=127, channel=10)
 input1 = Input(chnl=0, mul=.7).mix(2)
 input2 = Input(chnl=1, mul=.7).mix(2)
 
-drums = Drums(kicks, drumsCS, transpo, hfdamp, lfofreq)
+drums = Drums(snds, drumsCS, transpo, hfdamp, lfofreq)
 
 a1 = Synth(n2, trigs[0], toggles1, [SIGSNB[0],SIGSNB[8]], transpo, hfdamp, lfofreq, [drums.sig(),input1], mul=MULPOW[0])
 a2 = FreakSynth(n2, trigs[1], toggles2, [SIGSNB[1],SIGSNB[9]], transpo, hfdamp, lfofreq, drums.sig(), mul=MULPOW[1])
@@ -123,7 +124,8 @@ r2 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),drums.sig()
 r3 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),drums.sig()]), trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, hfdamp, drums.sig(), mul=MULPOW[6])
 r4 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()]), trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, hfdamp, drums.sig(), mul=MULPOW[7])
 
-fx = EffectBox(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()]), [SIGSNB[16],SIGSNB[17],SIGSNB[18]], channel=10, mul=2)
+
+fx = EffectBox([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], fxtoggles, [SIGSNB[16],SIGSNB[17],SIGSNB[18],SIGSNB[19]], channel=10, mul=2)
 
 fr = Frottement(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),fx.sig(),drums.sig()]), [SIGSNB[20],SIGSNB[23]], freq=[.1,.3,.5,.9], outs=NUM_OUTS)
 ac = Accumulation(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),fx.sig(),drums.sig()]), SIGSNB[21], delay=.15, outs=NUM_OUTS)
