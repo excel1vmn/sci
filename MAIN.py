@@ -26,7 +26,7 @@ if NUM_OUTS == 2:
         print('INT')
 else:
     s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=1, audio='jack')
-    s.setInOutDevice(6)
+    s.setInOutDevice(0)
     print('JACK')
 
 # LINUX AUDIO/MIDI CONFIG
@@ -79,15 +79,19 @@ def ctl_scan(ctlnum, midichnl):
     print(ctlnum, midichnl)
 ctlscan = CtlScan2(ctl_scan, True)
 
-# MULPOW = Pow(Midictl(ctlnumber=[0,1,2,3,4,5,6,7], init=0, channel=1), 3)
-# SIGSNB = Midictl(ctlnumber=[8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31], init=0, channel=1)
-
-MULPOW = Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 3)
+#--- LAUNCH CONTROL XL ---#
+MULPOW = Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 5)
 SIGSNB = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,29,30,31,32,33,34,35,36,49,50,51,52,53,54,55,56], init=0, channel=6)
+#--- LAUNCH CONTROL XL ---#
+
+#--- NAKED BOARDS ---#
+# MULPOW = Pow(Midictl(ctlnumber=[0,1,2,3,4,5,6,7], init=0, channel=1), 5)
+# SIGSNB = Midictl(ctlnumber=[8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31], init=0, channel=1)
+#--- NAKED BOARDS ---#
 
 transpo = Bendin(brange=2, scale=1, channel=1)
 # High frequency damping mapped to controller number 1.
-hfdamp = Midictl(ctlnumber=52, minscale=20, maxscale=7000, init=7000, channel=6)
+hfdamp = Midictl(ctlnumber=52, minscale=20, maxscale=5000, init=5000, channel=6)
 # Frequency of the LFO applied to the speed of the moving notches.
 lfofreq = Midictl(ctlnumber=13, minscale=0.1, maxscale=20, init=0.2, channel=6)
 # Toggles certain parameters of ReSampler class instruments 
@@ -124,14 +128,13 @@ r2 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),drums.sig()
 r3 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),drums.sig()]), trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, hfdamp, drums.sig(), mul=MULPOW[6])
 r4 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()]), trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, hfdamp, drums.sig(), mul=MULPOW[7])
 
-
 fx = EffectBox([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], fxtoggles, [SIGSNB[16],SIGSNB[17],SIGSNB[18],SIGSNB[19]], channel=10, mul=2)
 
-fr = Frottement(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),fx.sig(),drums.sig()]), [SIGSNB[20],SIGSNB[23]], freq=[.1,.3,.5,.9], outs=NUM_OUTS)
-ac = Accumulation(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),fx.sig(),drums.sig()]), SIGSNB[21], delay=.15, outs=NUM_OUTS)
+fr = Frottement([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),fx.sig(),drums.sig()], [SIGSNB[20],SIGSNB[23]], freq=[3,20,.5,9], outs=NUM_OUTS).out()
+ac = Accumulation([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),fx.sig(),drums.sig()], SIGSNB[21], delay=.15, outs=NUM_OUTS).out()
 
-filtHP = ButLP(Mix([fr, ac]), 12000)
-comp = Compress(filtHP, thresh=-24, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(NUM_OUTS).out()
+# filtHP = ButLP(fr+ac, 5000).mix(2)
+# comp = Compress(filtHP, thresh=-20, ratio=4, risetime=.01, falltime=.2, knee=0.5).mix(NUM_OUTS).out(0)
 
 # sender = OscDataSend("iffffff", 18032, '/spat/serv')
 

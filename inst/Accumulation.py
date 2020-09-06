@@ -40,7 +40,7 @@ class Accumulation(PyoObject):
                 self._passes.append(Allpass(self._mod[1], self._rand[1]))
         self._pan = Pan(self._passes, outs=outs[0], pan=.5, spread=.3, mul=in_fader)
         self._clean = Sig(in_fader, mul=1-cs[0])
-        self._comp = Compress(Mix([self._clean,self._pan]), thresh=-20, ratio=4, knee=.5)
+        self._comp = Compress(Mix([self._clean,self._pan]), thresh=-12, ratio=4, knee=.5)
         self._out = Sig(Mix(self._comp, outs[0]), mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

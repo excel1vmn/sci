@@ -5,15 +5,15 @@ from pyo import *
 import math
 
 class Synth:
-    def __init__(self, noteinput, trig, toggles, cs, transpo=1, hfdamp=7000, lfofreq=0.2, audioIN=0, mul=1):
+    def __init__(self, noteinput, trig, toggles, cs, transpo=1, hfdamp=5000, lfofreq=0.2, audioIN=0, mul=1):
         self.note = noteinput
         self.trig = trig
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
         self.trigCheck = Select(self.trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.changeParams)
-        self.trigToggles = TrigFunc(self.toggleCheck, self.toggleFX)
-        self.cs = cs
+        self.toggles = toggles
+        self.toggleCheck = Change(self.toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.cs = Sig(cs)
         self.transpo = Sig(transpo)
         self.input = Sig(audioIN).stop()
 
@@ -21,8 +21,8 @@ class Synth:
         self.pit = MToF(self.note['pitch']) * self.transpo
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
 
-        self.sigRand = SigTo(TrigRand(self.note['trigon'], .01, 5))
-        self.ampLfo = FastSine(self.sigRand * 20, quality=0, mul=.5, add=.5)
+        self.sigRand = SigTo(TrigRand(self.note['trigon'], .01, 10))
+        self.panLfo = FastSine(self.sigRand, quality=0, mul=.5, add=.5)
         self.te = ExpTable([(0,0),(4096,1),(8192,0)], exp=3, inverse=True)
         self.logOsc = Osc(table=self.te, freq=20*(self.cs[1]+2))
         self.fs = FastSine(freq=self.logOsc, mul=self.cs[1])
@@ -37,15 +37,15 @@ class Synth:
 
         self.osc1 = FastSine(self.sigRand, mul=self.cs[1])
         self.osc2 = FastSine(self.sigRand*.98, mul=self.cs[1])
-        self.cfm = CrossFM(carrier=self.pit, ratio=Mix([self.osc1,self.osc2]), ind1=self.cs[0]*100, ind2=self.fs, mul=self.amp)
-        self.mix = Mix(self.cfm, voices=2)
+        self.cfm = CrossFM(carrier=self.pit, ratio=Mix([self.osc1,self.osc2]), ind1=self.cs[0]*50, ind2=self.fs, mul=self.amp)
+        self.mix = Mix(self.cfm)
 
         self.lfoAmp = FastSine(.1, quality=0, mul=800, add=800)
         self.lfo = Sine(lfofreq, phase=[random.random(),random.random()], mul=self.lfoAmp, add=3000)
-        self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
-        self.notch = ButBR(self.damp, self.lfo).mix(2)
-        self.hp = ButHP(self.notch, 50).mix(2)
-        self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.ampLfo, spread=.5, mul=mul)
+        self.damp = ButLP(self.mix, freq=hfdamp).mix(1)
+        self.notch = ButBR(self.damp, self.lfo).mix(1)
+        self.hp = ButHP(self.notch, 50).mix(1)
+        self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.panLfo, spread=.5, mul=mul)
 
     def out(self):
         self.p.out()
@@ -74,21 +74,16 @@ class Synth:
         else:
             print('off 2')
 
-        if Sig(self.toggles[2]).get() == 1:
-            print('on 3')
-        else:
-            print('off 3')
-
 class FreakSynth:
-    def __init__(self, noteinput, trig, toggles, cs, transpo=1, hfdamp=7000, lfofreq=0.2, audioIN=0, mul=1):
+    def __init__(self, noteinput, trig, toggles, cs, transpo=1, hfdamp=5000, lfofreq=0.2, audioIN=0, mul=1):
         self.note = noteinput
         self.trig = trig
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
         self.trigCheck = Select(self.trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.changeParams)
-        self.trigToggles = TrigFunc(self.toggleCheck, self.toggleFX)
-        self.cs = cs
+        self.toggles = toggles
+        self.toggleCheck = Change(self.toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.cs = Sig(cs)
         self.transpo = Sig(transpo)
         self.input = Sig(audioIN).stop()
 
@@ -103,10 +98,10 @@ class FreakSynth:
         self.harmLfo = FastSine(self.pit, quality=0, mul=(self.cs[1]*20)+1, add=(self.cs[1]*50)+20)
         self.ampLfo = FastSine((self.valVel*50)*(self.trand*5), quality=0, add=.5)
 
-        self.blit = Blit(freq=[self.pit,self.pit*.98]*self.blitLfo, harms=self.harmLfo).mix(2)
-        self.cfm = CrossFM(carrier=self.pit, ratio=self.blit*((self.cs[0]*10)+1), ind1=self.cs[0]*2, ind2=self.cs[0]*5, mul=self.amp).mix(2)
+        self.blit = Blit(freq=[self.pit,self.pit*.98]*self.blitLfo, harms=self.harmLfo).mix(1)
+        self.cfm = CrossFM(carrier=self.pit, ratio=self.blit*((self.cs[0]*10)+1), ind1=self.cs[0]*2, ind2=self.cs[0]*5, mul=self.amp).mix(1)
 
-        self.mix = Mix(self.cfm, voices=2)
+        self.mix = Mix(self.cfm)
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -116,9 +111,9 @@ class FreakSynth:
         # SIDECHAIN #
 
         self.lfo = Sine(lfofreq, phase=[random.random(), random.random()]).range(240, 4000)
-        self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
-        self.notch = ButBR(self.damp, self.lfo).mix(2)
-        self.hp = ButHP(self.notch, 50).mix(2)
+        self.damp = ButLP(self.mix, freq=hfdamp).mix(1)
+        self.notch = ButBR(self.damp, self.lfo).mix(1)
+        self.hp = ButHP(self.notch, 50).mix(1)
         self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.ampLfo, spread=.5, mul=mul)
 
     def out(self):
@@ -148,22 +143,17 @@ class FreakSynth:
         else:
             print('off 2')
 
-        if Sig(self.toggles[2]).get() == 1:
-            print('on 3')
-        else:
-            print('off 3')
-
 class Simpler:
-    def __init__(self, noteinput, paths, trig, toggles, cs, transpo=1, hfdamp=7000, lfofreq=0.2, autoswitch=False, withloop=False, audioIN=0, mul=1):
+    def __init__(self, noteinput, paths, trig, toggles, cs, transpo=1, hfdamp=5000, lfofreq=0.2, autoswitch=False, withloop=False, audioIN=0, mul=1):
         self.note = noteinput
         self.paths = paths
         self.trig = trig
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
         self.trigCheck = Select(self.trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.shuffleSamples)
-        self.trigToggles = TrigFunc(self.toggleCheck, self.toggleFX)
-        self.cs = cs
+        self.toggles = toggles
+        self.toggleCheck = Change(self.toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.cs = Sig(cs)
         self.transpo = Sig(transpo)
         self.input = Sig(audioIN).stop()
         
@@ -192,7 +182,7 @@ class Simpler:
             self.t = SndTable(self.paths, initchnls=2)
             self.freq = self.t.getRate()
             self.dur = self.t.getDur()
-            self.oscT = OscTrig(self.t, self.note['trigon'], (self.freq*self.tra), mul=self.amp).mix(2)
+            self.oscT = OscTrig(self.t, self.note['trigon'], (self.freq*self.tra), mul=self.amp).mix(1)
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -201,11 +191,11 @@ class Simpler:
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 
-        self.damp = ButLP(self.oscT, freq=hfdamp).mix(2)
+        self.damp = ButLP(self.oscT, freq=hfdamp).mix(1)
         self.lfo = Sine(lfofreq, phase=[random.random(), random.random()]).range(250, 4000)
-        self.notch = ButBR(self.damp, self.lfo).mix(2)
-        self.hp = ButHP(self.notch, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.notch = ButBR(self.damp, self.lfo).mix(1)
+        self.hp = ButHP(self.notch, 50).mix(1)
+        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
         self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.ampLfo, spread=.3, mul=mul)
 
     def out(self):
@@ -239,22 +229,17 @@ class Simpler:
         else:
             print('off 2')
 
-        if Sig(self.toggles[2]).get() == 1:
-            print('on 3')
-        else:
-            print('off 3')
-
 class WaveShape:
-    def __init__(self, noteinput, path, trig, toggles, cs, transpo=1, hfdamp=7000, lfofreq=0.2, audioIN=0, mul=1):
+    def __init__(self, noteinput, path, trig, toggles, cs, transpo=1, hfdamp=5000, lfofreq=0.2, audioIN=0, mul=1):
         self.note = noteinput
         self.path = path
         self.trig = trig
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
         self.trigCheck = Select(self.trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.changeParams)
-        self.trigToggles = TrigFunc(self.toggleCheck, self.toggleFX)
-        self.cs = cs
+        self.toggles = toggles
+        self.toggleCheck = Change(self.toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.cs = Sig(cs)
         self.transpo = Sig(transpo)
         self.input = Sig(audioIN).stop()
 
@@ -275,8 +260,8 @@ class WaveShape:
         self.a2 = Osc(self.snd, (self.freq*.98)*self.tra, mul=self.amp*(self.lfo+1)).mix(1)
 
         # Stereo mix.
-        self.mix = Mix([self.a1,self.a2], voices=2)
-        self.look = Lookup(self.t, self.mix).mix(2)
+        self.mix = Mix([self.a1,self.a2])
+        self.look = Lookup(self.t, self.mix).mix(1)
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -286,9 +271,9 @@ class WaveShape:
         # SIDECHAIN #
 
         self.interp = Interp(self.mix, self.look, self.veltrand)
-        self.damp = ButLP(self.look, freq=hfdamp).mix(2)
-        self.hp = ButHP(self.damp, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.damp = ButLP(self.look, freq=hfdamp).mix(1)
+        self.hp = ButHP(self.damp, 50).mix(1)
+        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
         self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.ampLfo, spread=.5, mul=mul)
 
     def out(self):
@@ -318,13 +303,8 @@ class WaveShape:
         else:
             print('off 2')
 
-        if Sig(self.toggles[2]).get() == 1:
-            print('on 3')
-        else:
-            print('off 3')
-
 class Drums:
-    def __init__(self, paths, cs, transpo=1, hfdamp=7000, lfofreq=0.2, audioIN=0, mul=1):
+    def __init__(self, paths, cs, transpo=1, hfdamp=5000, lfofreq=0.2, audioIN=0, mul=1):
         self.paths = paths
         self.cs = cs
         self.transpo = Sig(transpo)
@@ -345,10 +325,10 @@ class Drums:
             self.selectors.append(Select(self.trmid, value=36+i))
             self.players.append(TrigEnv(self.selectors[i], self.tables[i], dur=self.tables[i].getDur()/self.transpo, mul=self.amp.mix(1)))
 
-        self.mix = Mix(self.players, voices=2)
-        self.damp = ButLP(self.mix, freq=hfdamp).mix(2)
-        self.hp = ButHP(self.damp, 50).mix(2)
-        self.comp = Compress(self.hp, thresh=-12, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.mix = Mix(self.players)
+        self.damp = ButLP(self.mix, freq=hfdamp).mix(1)
+        self.hp = ButHP(self.damp, 50).mix(1)
+        self.comp = Compress(self.hp, thresh=-12, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
         self.p = Pan(self.comp, outs=2, pan=[.4,.6], spread=.2, mul=mul)
 
     def out(self):
@@ -367,12 +347,12 @@ class ReSampler:
         self.audioREC = Sig(audioREC)
         self.audioIN = Sig(audioIN)
         self.trig = trig
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
         self.trigCheck = Select(self.trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.rec)
-        self.trigToggles = TrigFunc(self.toggleCheck, self.toggleFX)
-        self.cs = cs
+        self.toggles = toggles
+        self.toggleCheck = Change(self.toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.cs = Sig(cs)
         self.transpo = Sig(transpo)
         self.input = Sig(audioIN).stop()
        
@@ -388,10 +368,10 @@ class ReSampler:
         self.trigLoop = TrigFunc(self.tr['trig'], self.playAftRec).stop()
         self.envGen = TrigFunc(self.note['trigon'], self.createPoints, arg=8).stop()
         self.ind = CosTable([(0,0), (8191,0)], size=8192)
-        self.trMod = Osc(self.ind, self.nt.getRate() * self.tra, mul=self.cs[0]).mix(2).stop()
+        self.trMod = Osc(self.ind, self.nt.getRate() * self.tra, mul=self.cs[0]).mix(1).stop()
 
         self.check = Change(self.toggles)
-        self.trigToggles = TrigFunc(self.check, self.toggleFX)
+        self.toggleChange = TrigFunc(self.check, self.toggleFX)
         
         # ADD RANDOMIZER ELEMENTS
         self.randPitchs = [.25,.5,.75,1,1.25,1.5,1.75]
@@ -402,9 +382,9 @@ class ReSampler:
         self.dur2 = self.nt.getDur()
 
         self.fs1 = FastSine(freq=self.trMod, quality=0, mul=self.valVel, add=.5)
-        self.refSine = FastSine(freq=400).mix(2)
+        self.refSine = FastSine(freq=400).mix(1)
 
-        self.loop = Looper(self.nt, (self.pitch1+self.pitch2)*self.tra, start=self.start, dur=self.dur1+self.dur2, startfromloop=False, autosmooth=False, mul=self.amp).mix(2).stop()
+        self.loop = Looper(self.nt, (self.pitch1+self.pitch2)*self.tra, start=self.start, dur=self.dur1+self.dur2, startfromloop=False, autosmooth=False, mul=self.amp).mix(1).stop()
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -413,10 +393,10 @@ class ReSampler:
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 
-        self.dist = Disto(self.loop, drive=self.cs[1], slope=self.trMod).mix(2)
-        self.damp = ButLP(self.dist, freq=hfdamp).mix(2)
-        self.bal = Balance(self.damp, self.refSine, freq=20).mix(2)
-        self.comp = Compress(self.bal, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.dist = Disto(self.loop, drive=self.cs[1], slope=self.trMod).mix(1)
+        self.damp = ButLP(self.dist, freq=hfdamp).mix(1)
+        self.bal = Balance(self.damp, self.refSine, freq=20).mix(1)
+        self.comp = Compress(self.bal, thresh=-15, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
         self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.fs1, spread=self.valVel, mul=mul)
 
     def out(self):
@@ -483,11 +463,6 @@ class ReSampler:
             self.pitch2.play()
             self.dur1.stop()
 
-        if Sig(self.toggles[2]).get() == 1:
-            print('on 3')
-        else:
-            print('off 3')
-
 class EffectBox:
     def __init__(self, input, toggles, cs, channel=1, mul=1):
         # self.input = Mix(input, voices=2)
@@ -497,13 +472,12 @@ class EffectBox:
         self.fx = []
 
         self.check = Change(self.toggles)
-        self.trigToggles = TrigFunc(self.check, self.toggleFX)
+        self.toggleChange = TrigFunc(self.check, self.toggleFX)
 
-        self.mixer = Mixer(outs=9, chnls=2)
+        self.mixer = Mixer(outs=9)
         for i in range(9):
             self.mixer.addInput(i, self.input[i])
-            self.mixer.setAmp(i,i,0)
-            self.mixer.setAmp(i,i+1,0)
+            self.mixer.setAmp(i,0,0)
 
         self.downmix = Mix(self.mixer)
 
@@ -521,13 +495,12 @@ class EffectBox:
         # self.mixed = Interp(self.mix, self.lp, interp=0)
         # TRANSFER FUNCTION
 
-        self.fx.append(Disto(self.downmix, drive=.95, slope=.8, mul=Pow(self.cs[0]*10,3)))
-        self.fx.append(FreqShift(Mix(self.downmix+self.fx[0]), shift=10*((self.fx[0]*.2)+1), mul=Pow(self.cs[1]*10,3)))
-        self.fx.append(WGVerb(self.downmix, feedback=[.74,.75], cutoff=5000, bal=1, mul=Pow(self.cs[2]*10,3)))
-        self.fx.append(MoogLP(self.downmix, 12000*(self.cs[3]+.001), res=0, mul=Pow(self.cs[3]*10,3)))
+        self.fx.append(Disto(self.downmix, drive=.9, slope=.8, mul=Pow(self.cs[0],3)))
+        self.fx.append(FreqShift(Mix(self.downmix+self.fx[0]), shift=10*((self.fx[0]*.2)+1), mul=Pow(self.cs[1],3)))
+        self.fx.append(WGVerb(self.downmix, feedback=[.74,.75], cutoff=5000, bal=1, mul=Pow(self.cs[2],3)))
+        self.fx.append(MoogLP(self.downmix, Pow(12000*(self.cs[3]+.001),3), res=0, mul=Pow(self.cs[3],3)))
 
-        self.mix = Mix(self.fx, voices=2)
-        self.comp = Compress(Mix(self.fx, voices=2), thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(2)
+        self.comp = Compress(Mix(self.fx), thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
         self.p = Pan(self.comp, outs=2, pan=.5, spread=.4, mul=mul)
 
     def out(self):
@@ -540,57 +513,41 @@ class EffectBox:
     def toggleFX(self):
         if Sig(self.toggles[0]).get() == 1:
             self.mixer.setAmp(0,0,1)
-            self.mixer.setAmp(0,1,1)
             print('sup')
         else:
             self.mixer.setAmp(0,0,0)
-            self.mixer.setAmp(0,1,0)
 
         if Sig(self.toggles[1]).get() == 1:
             self.mixer.setAmp(1,0,1)
-            self.mixer.setAmp(1,1,1)
         else:
             self.mixer.setAmp(1,0,0)
-            self.mixer.setAmp(1,1,0)
 
         if Sig(self.toggles[2]).get() == 1:
             self.mixer.setAmp(2,0,1)
-            self.mixer.setAmp(2,1,1)
         else:
             self.mixer.setAmp(2,0,0)
-            self.mixer.setAmp(2,1,0)
 
         if Sig(self.toggles[3]).get() == 1:
             self.mixer.setAmp(3,0,1)
-            self.mixer.setAmp(3,1,1)
         else:
             self.mixer.setAmp(3,0,0)
-            self.mixer.setAmp(3,1,0)
 
         if Sig(self.toggles[4]).get() == 1:
             self.mixer.setAmp(4,0,1)
-            self.mixer.setAmp(4,1,1)
         else:
             self.mixer.setAmp(4,0,0)
-            self.mixer.setAmp(4,1,0)
 
         if Sig(self.toggles[5]).get() == 1:
             self.mixer.setAmp(5,0,1)
-            self.mixer.setAmp(5,1,1)
         else:
             self.mixer.setAmp(5,0,0)
-            self.mixer.setAmp(5,1,0)
 
         if Sig(self.toggles[6]).get() == 1:
             self.mixer.setAmp(6,0,1)
-            self.mixer.setAmp(6,1,1)
         else:
             self.mixer.setAmp(6,0,0)
-            self.mixer.setAmp(6,1,0)
 
         if Sig(self.toggles[7]).get() == 1:
             self.mixer.setAmp(7,0,1)
-            self.mixer.setAmp(7,1,1)
         else:
             self.mixer.setAmp(7,0,0)
-            self.mixer.setAmp(7,1,0)

@@ -26,22 +26,23 @@ class Frottement(PyoObject):
         self._in_fader = InputFader(input)
         in_fader,cs,freq,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,outs,mul,add)
         self._numINs = len(in_fader)
-        self._rdur = RandDur(min=freq, max=freq*100)
+        self._rlfo = RandDur(min=freq, max=freq*100)
+        self._noise = Allpass2(Noise(.5), freq=2000, bw=2000)
         if type(freq) is list:
             self._lfoFreq = []
             for i in range(len(freq)):
-                self._lfoFreq.append(cs[0]*self._rdur[i]*i)
-            self._lfo = FastSine(freq=self._lfoFreq, mul=1*Pow(cs[0],3))
+                self._lfoFreq.append(cs[0]*self._rlfo[i]*i)
+            self._lfo = FastSine(freq=self._lfoFreq, mul=Pow(cs[0],3))
             self._mod = MultiBand(in_fader, num=len(freq), mul=self._lfo)
             print('is list')
         else:
-            self._lfo = FastSine(freq=cs[0]*self._rdur[0], mul=.9*Pow(cs[0],3), add=.1)
+            self._lfo = FastSine(freq=cs[0]*self._rlfo[0], mul=.9*Pow(cs[0],3), add=.1)
             self._mod = MultiBand(in_fader, num=4, mul=self._lfo)
             print('is not list')
-        self._dis = Disto(self._mod, drive=(.98*Pow(cs[0],3)), slope=self._lfo, mul=cs[0]*.7)
-        self._pan = Pan(self._mod, outs=outs[0], pan=in_fader*cs[0], spread=.3, mul=in_fader*cs[0])
-        self._comp = Compress(Mix([self._mod,self._dis,self._pan]), thresh=-20, ratio=4, knee=0.5)
-        self._out = Sig(self._comp, mul=mul, add=add)
+        self._dis = Disto(self._mod, drive=.9*cs[0], slope=self._lfo, mul=Pow(cs[0]*.8,3))
+        self._comp = Compress(Mix([self._mod,self._dis]), thresh=-12, ratio=4, knee=0.5)
+        self._pan = Pan(self._comp, outs=outs[0], pan=self._noise*cs[0], spread=.3, mul=in_fader*cs[0])
+        self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
