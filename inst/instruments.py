@@ -40,8 +40,8 @@ class Synth:
         self.cfm = CrossFM(carrier=self.pit, ratio=Mix([self.osc1,self.osc2]), ind1=self.cs[0]*50, ind2=self.fs, mul=self.amp)
         self.mix = Mix(self.cfm)
 
-        self.lfoAmp = FastSine(.1, quality=0, mul=800, add=800)
-        self.lfo = Sine(lfofreq, phase=[random.random(),random.random()], mul=self.lfoAmp, add=3000)
+        # self.lfoAmp = FastSine(.1, quality=0, mul=800, add=800)
+        self.lfo = Sine(lfofreq, phase=[random.random(),random.random()], mul=1, add=3000)
         self.damp = ButLP(self.mix, freq=hfdamp).mix(1)
         self.notch = ButBR(self.damp, self.lfo).mix(1)
         self.hp = ButHP(self.notch, 50).mix(1)
@@ -468,7 +468,7 @@ class EffectBox:
         # self.input = Mix(input, voices=2)
         self.input = input
         self.toggles = toggles
-        self.cs = cs
+        self.cs = Sig(cs)
         self.fx = []
 
         self.check = Change(self.toggles)
@@ -480,6 +480,7 @@ class EffectBox:
             self.mixer.setAmp(i,0,0)
 
         self.downmix = Mix(self.mixer)
+        print(self.input)
 
         # TRANSFER FUNCTION
         # self.table = ExpTable([(0,-.25),(4096,0),(8192,0)], exp=30)
