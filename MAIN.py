@@ -4,6 +4,7 @@ from pyo import *
 from inst.instruments import *
 from inst.Frottement import *
 from inst.Accumulation import *
+from inst.Rebond import *
 from inst.FXBox import *
 from inst.RingMod import *
 from gridHandler import *
@@ -48,18 +49,6 @@ snds = []
 for names in items:
     if names.endswith(".aif") | names.endswith(".wav"):
         snds.append("snds/" + names)
-
-# itemD = os.listdir("sndsDrums")
-# sndsDrums = []
-# for names in itemD:
-#     if names.endswith(".aif") | names.endswith(".wav") | names.endswith(".WAV"):
-#         sndsDrums.append("sndsDrums/" + names)
-
-# itemSB = os.listdir("sndsSB")
-# sndsSB = []
-# for names in itemSB:
-#     if names.endswith(".aif") | names.endswith(".wav"):
-#         sndsSB.append("sndsSB/" + names)
 
 # itemK = os.listdir("kicks")
 # kicks = []
@@ -136,10 +125,12 @@ r4 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3
 ### FIX : possible crash dans laa banque d'effet -> MoogLP > Reverb
 fxbox = FXBox([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], fxtoggles, [SIGSNB[16],SIGSNB[17],SIGSNB[18],SIGSNB[19]])
 
-fr = Frottement([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),Mix(fxbox),drums.sig()], SIGSNB[20], freq=[3,20,.5,9], outs=NUM_OUTS).out()
+# fr = Frottement([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),Mix(fxbox),drums.sig()], SIGSNB[20], freq=[3,20,.5,9], outs=NUM_OUTS).out()
 ### FIX : corriger le fonctionnement du traitement dans instruments
-ac = Accumulation([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),Mix(fxbox),drums.sig()], SIGSNB[21], delay=.01, outs=NUM_OUTS).out()
+ac = Accumulation(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),Mix(fxbox),drums.sig()],2), SIGSNB[21], delay=.01, outs=NUM_OUTS).out()
 ### ADD : prochaine technique d'écriture : rebond
+# re = Rebond(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),Mix(fxbox),drums.sig()],2), SIGSNB[22], base_interval=.5, outs=NUM_OUTS).out()
+
 
 # filtHP = ButLP(fr+ac, 5000).mix(2)
 # comp = Compress(filtHP, thresh=-20, ratio=4, risetime=.01, falltime=.2, knee=0.5).mix(NUM_OUTS).out(0)

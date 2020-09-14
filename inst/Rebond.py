@@ -2,9 +2,9 @@
 # encoding: utf-8
 from pyo import *
 
-class PyoObjectTemplate(PyoObject):
+class Rebond(PyoObject):
     """
-    Pyo Object Template.
+    Rebond comme geste musicale.
 
     Description of your pyo object class and it's diverse use cases.
 
@@ -25,14 +25,22 @@ class PyoObjectTemplate(PyoObject):
     >>> pot = PyoObjectTemplate(src, freq=[800,1000], mul=lfo).out()
 
     """
-    def __init__(self, input, freq=100, mul=1, add=0):
+    def __init__(self, input, cs, base_interval=.5, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._freq = freq
+        self._cs = cs
+        self._base_interval = base_interval
+        self._outs = outs
         self._in_fader = InputFader(input)
-        in_fader,freq,mul,add,lmax = convertArgsToLists(self._in_fader,freq,mul,add)
-        self._mod = Sine(freq=freq, mul=in_fader)
-        self._out = Sig(self._mod, mul=mul, add=add)
+        in_fader,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,base_interval,outs,mul,add)
+        self._check = Change(cs)
+        self._delay_seg = TrigLinseg(self._check, [(0,1),(4,.001)])
+        self._count = Counter(self._check, min=5, max=10, dir=2)
+        self._mod = SmoothDelay(in_fader, delay=self._delay_seg, feedback=self._count*.1, maxdelay=1, mul=cs)
+        self._clean = Sig(in_fader, mul=1)
+        self._comp = Compress(Mix([self._mod,self._clean]), thresh=-12, ratio=4, knee=0.5)
+        self._pan = Pan(self._comp, outs=outs[0], pan=.5, spread=.3)
+        self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
@@ -50,7 +58,7 @@ class PyoObjectTemplate(PyoObject):
         self._input = x
         self._in_fader.setInput(x, fadetime)
 
-    def setFreq(self, x):
+    def setInterval(self, x):
         """
         Replace the `freq` attribute.
 
@@ -60,8 +68,7 @@ class PyoObjectTemplate(PyoObject):
                 New `freq` attribute.
 
         """
-        self._freq = x
-        self._mod.freq = x
+        self._base_interval = x
 
     def play(self, dur=0, delay=0):
         self._mod.play(dur, delay)
@@ -76,7 +83,7 @@ class PyoObjectTemplate(PyoObject):
         return PyoObject.out(self, chnl, inc, dur, delay)
 
     def ctrl(self, map_list=None, title=None, wxnoserver=False):
-        self._map_list = [SLMap(10, 2000, "log", "freq", self._freq),
+        self._map_list = [SLMap(10, 2000, "log", "interval", self._base_interval),
                           SLMapMul(self._mul)]
         PyoObject.ctrl(self, map_list, title, wxnoserver)
 
@@ -89,12 +96,12 @@ class PyoObjectTemplate(PyoObject):
         self.setInput(x)
 
     @property
-    def freq(self):
+    def interval(self):
         """float or PyoObject. Frequency of the modulator."""
-        return self._freq
-    @freq.setter
-    def freq(self, x):
-        self.setFreq(x)
+        return self._base_interval
+    @interval.setter
+    def interval(self, x):
+        self.setInterval(x)
 
 # Run the script to test the PyoObjectTemplate object.
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from pyo import *
 
 class Accumulation(PyoObject):
     """
-    Accumulation comme gestes musicales
+    Accumulation comme geste musicale.
 
     Descriptions à écrire...
 
@@ -25,7 +25,7 @@ class Accumulation(PyoObject):
         self._outs = outs
         self._in_fader = InputFader(input)
         in_fader,cs,delay,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,delay,outs,mul,add)
-        self._onesample = 1.0 / 48000   
+        self._onesample = 1.0 / 48000
         self._check = Change(cs[0])
         self._fade = TrigLinseg(self._check, [(.01,1),(.5,.7),(1,0)])
         self._rand = SigTo(RandDur(min=[self._delay,self._delay*1.04,self._delay*1.09,self._delay*1.13],max=[.31,.33,.36,.4], mul=self._fade))
@@ -38,10 +38,11 @@ class Accumulation(PyoObject):
                 self._passes.append(Allpass(self._mod[0], self._rand[0]))
             else:
                 self._passes.append(Allpass(self._mod[1], self._rand[1]))
-        self._pan = Pan(self._passes, outs=outs[0], pan=.5, spread=.3)
         self._clean = Sig(in_fader, mul=1-cs[0])
-        self._comp = Compress(Mix([self._clean,self._pan]), thresh=-12, ratio=4, knee=.5)
-        self._out = Sig(Mix(self._comp, outs[0]), mul=mul, add=add)
+        self._passesM = Mix(self._passes)
+        self._comp = Compress(Mix([self._clean,self._passesM]), thresh=-12, ratio=4, knee=.5)
+        self._pan = Pan(self._comp, outs=outs[0], pan=.5, spread=.3)
+        self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
