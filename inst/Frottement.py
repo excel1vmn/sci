@@ -28,6 +28,7 @@ class Frottement(PyoObject):
         self._numINs = len(in_fader)
         self._rlfo = RandDur(min=freq, max=freq*100)
         self._noise = Allpass2(Noise(.5), freq=2000, bw=2000)
+        self._panner = FastSine(freq=.07, mul=.5, add=.5)
         if type(freq) is list:
             self._lfoFreq = []
             for i in range(len(freq)):
@@ -41,7 +42,7 @@ class Frottement(PyoObject):
             print('is not list')
         self._dis = Disto(self._mod, drive=.9*cs[0], slope=self._lfo, mul=Pow(cs[0]*.8,3))
         self._comp = Compress(Mix([self._mod,self._dis]), thresh=-12, ratio=4, knee=0.5)
-        self._pan = Pan(self._comp, outs=outs[0], pan=self._noise*cs[0], spread=.3, mul=in_fader*cs[0])
+        self._pan = Pan(self._comp, outs=outs[0], pan=self._panner*self._noise*cs[0], spread=.3, mul=in_fader*cs[0])
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

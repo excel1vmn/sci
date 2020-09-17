@@ -304,17 +304,18 @@ class WaveShape:
             print('off 2')
 
 class Drums:
-    def __init__(self, paths, cs, transpo=1, hfdamp=5000, lfofreq=0.2, audioIN=0, mul=1):
+    def __init__(self, noteinput, paths, cs, transpo=1, hfdamp=5000, lfofreq=0.2, audioIN=0, mul=1):
+        self.note = noteinput
         self.paths = paths
         self.cs = cs
         self.transpo = Sig(transpo)
-        # self.tra = MToT(self.note['pitch']) * self.transpo
-        # self.pit = MToF(self.note['pitch']) * self.transpo
-        # self.amp = MidiAdsr(self.note, attack=.01, decay=.1, sustain=.7, release=.1)
-        self.beat = Beat(.125, 16, w1=100, w2=25, w3=15, poly=10).stop()
-        self.env = CosTable([(0,0), (100,1), (500,.3), (8191,0)])
-        self.amp = TrigEnv(self.beat, table=self.env)
-        self.trmid = TrigXnoiseMidi(self.beat, dist=0, mrange=(40,41))
+        self.tra = MToT(self.note['pitch']) * self.transpo
+        self.pit = MToF(self.note['pitch']) * self.transpo
+        self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.05, sustain=.8, release=.1)
+        # self.beat = Beat(.125, 16, w1=100, w2=25, w3=15, poly=10).stop()
+        # self.env = CosTable([(0,0), (100,1), (500,.3), (8191,0)])
+        # self.amp = TrigEnv(self.beat, table=self.env)
+        # self.trmid = TrigXnoiseMidi(self.beat, dist=0, mrange=(40,41))
 
         self.tables = []
         self.selectors = []
@@ -322,7 +323,7 @@ class Drums:
 
         for i in range(6):
             self.tables.append(SndTable(self.paths[i], initchnls=2))
-            self.selectors.append(Select(self.trmid, value=36+i))
+            self.selectors.append(Select(self.note['pitch'], value=36+i))
             self.players.append(TrigEnv(self.selectors[i], self.tables[i], dur=self.tables[i].getDur()/self.transpo, mul=self.amp.mix(1)))
 
         self.mix = Mix(self.players)

@@ -10,7 +10,7 @@ from inst.RingMod import *
 from gridHandler import *
 import math
 import os, sys
-import threading
+# import threading
 # import keyboard
 
 NUM_OUTS = 2
@@ -20,14 +20,14 @@ SOUND_CARD = 'EXT'
 if NUM_OUTS == 2:
     if SOUND_CARD == 'EXT':
         s = Server(sr=48000, nchnls=NUM_OUTS, duplex=1, audio='pa')
-        s.setInOutDevice(1)
+        s.setInOutDevice(0)
         print('EXT')
     else:
         s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=0, audio='pa')
         s.setOutputDevice(0)
         print('INT')
 else:
-    s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=1, audio='jack')
+    s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=0, audio='pa')
     s.setInOutDevice(0)
     print('JACK')
 
@@ -50,11 +50,11 @@ for names in items:
     if names.endswith(".aif") | names.endswith(".wav"):
         snds.append("snds/" + names)
 
-# itemK = os.listdir("kicks")
-# kicks = []
-# for names in itemK:
-#     if names.endswith(".aif") | names.endswith(".wav"):
-#         kicks.append("kicks/" + names)
+itemK = os.listdir("drum_kit")
+drum_kit = []
+for names in itemK:
+    if names.endswith(".aif") | names.endswith(".wav"):
+        drum_kit.append("drum_kit/" + names)
 
 # print(snds)
 # print(sndsDrums)
@@ -68,6 +68,10 @@ for names in items:
 def ctl_scan(ctlnum, midichnl):
     print(ctlnum, midichnl)
 ctlscan = CtlScan2(ctl_scan, False)
+
+# def event(status, data1, data2):
+#     print(status, data1, data2)
+# raw = RawMidi(event)
 
 #--- LAUNCH CONTROL XL ---#
 MULPOW = Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 5)
@@ -110,7 +114,7 @@ n10 = Notein(poly=24, scale=0, first=0, last=127, channel=10)
 input1 = Input(chnl=0, mul=.7).mix(2)
 input2 = Input(chnl=1, mul=.7).mix(2)
 
-drums = Drums(snds, drumsCS, transpo)
+drums = Drums(n10, drum_kit, drumsCS, transpo)
 
 a1 = Synth(n2, trigs[0], toggles1, [SIGSNB[0],SIGSNB[8]], transpo, audioIN=[drums.sig(),input1], mul=MULPOW[0])
 a2 = FreakSynth(n2, trigs[1], toggles2, [SIGSNB[1],SIGSNB[9]], transpo, audioIN=drums.sig(), mul=MULPOW[1])
@@ -125,12 +129,13 @@ r4 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3
 ### FIX : possible crash dans laa banque d'effet -> MoogLP > Reverb
 fxbox = FXBox([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], fxtoggles, [SIGSNB[16],SIGSNB[17],SIGSNB[18],SIGSNB[19]])
 
-# fr = Frottement([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),Mix(fxbox),drums.sig()], SIGSNB[20], freq=[3,20,.5,9], outs=NUM_OUTS).out()
+fr = Frottement(Mix(fxbox), SIGSNB[20], freq=[3,20,.5,9], outs=NUM_OUTS)
 ### FIX : corriger le fonctionnement du traitement dans instruments
-ac = Accumulation(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),Mix(fxbox),drums.sig()],2), SIGSNB[21], delay=.01, outs=NUM_OUTS).out()
+ac = Accumulation(Mix(fxbox), SIGSNB[21], delay=.01, outs=NUM_OUTS)
 ### ADD : prochaine technique d'écriture : rebond
-# re = Rebond(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),Mix(fxbox),drums.sig()],2), SIGSNB[22], base_interval=.5, outs=NUM_OUTS).out()
+re = Rebond(Mix(fxbox), SIGSNB[22], base_interval=.3, outs=NUM_OUTS)
 
+downmix = Mix([fr,ac,re], voices=NUM_OUTS, mul=.4).out(0)
 
 # filtHP = ButLP(fr+ac, 5000).mix(2)
 # comp = Compress(filtHP, thresh=-20, ratio=4, risetime=.01, falltime=.2, knee=0.5).mix(NUM_OUTS).out(0)

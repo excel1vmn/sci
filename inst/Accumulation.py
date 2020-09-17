@@ -32,6 +32,7 @@ class Accumulation(PyoObject):
         self._del1 = Delay(in_fader, delay=[delay[0]*1.02,delay[0]*2.1,delay[0]*2.8,delay[0]*4.2], feedback=[.51,.47], mul=cs[0])
         self._del2 = Delay(in_fader, delay=[delay[0]*.98,delay[0]*1.8,delay[0]*3.3,delay[0]*3.9], feedback=[.49,.53], mul=cs[0])
         self._mod = Sig([self._del1,self._del2])
+        self._panner = FastSine(freq=.03, mul=.5, add=.5)
         self._passes = []
         for i in range(4):
             if i%2 == 0:
@@ -41,7 +42,7 @@ class Accumulation(PyoObject):
         self._clean = Sig(in_fader, mul=1-cs[0])
         self._passesM = Mix(self._passes)
         self._comp = Compress(Mix([self._clean,self._passesM]), thresh=-12, ratio=4, knee=.5)
-        self._pan = Pan(self._comp, outs=outs[0], pan=.5, spread=.3)
+        self._pan = Pan(self._comp, outs=outs[0], pan=.5*self._panner, spread=.3)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

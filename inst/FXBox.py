@@ -44,11 +44,12 @@ class FXBox(PyoObject):
         self._fx.append(Disto(self._downmix, drive=.9, slope=.8, mul=Pow(cs[0],3)))
         self._fx.append(FreqShift(self._downmix, shift=10, mul=Pow(cs[1],3)))
         self._fx.append(WGVerb(self._downmix, feedback=.85, bal=1, mul=Pow(cs[2],3)))
-        # self._fx.append(MoogLP(self._downmix, Pow(6000*(cs[3]+.1),3), res=0, mul=Pow(cs[3],3)))
+        self._fx.append(Mix(self._input, mul=Pow(4-(cs[0]+cs[1]+cs[2]+cs[3]), 3)))
 
-        self._mod = Sig(self._fx)
+        self._filt = Biquad(self._fx, Pow(8000*(cs[3]+.1),3), q=cs[3]*50, mul=Pow(cs[3],3))
+        self._mod = Sig(self._filt)
         self._comp = Compress(self._mod, thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=0.5)
-        self._pan = Pan(self._comp, outs=outs[0], pan=.5, spread=.4)
+        self._pan = Pan(self._comp, outs=outs[0], pan=.5, spread=.3)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
