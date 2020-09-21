@@ -2,9 +2,9 @@
 # encoding: utf-8
 from pyo import *
 
-class Rebond(PyoObject):
+class Oscillation(PyoObject):
     """
-    Rebond comme geste musicale.
+    Pyo Object Template.
 
     Description of your pyo object class and it's diverse use cases.
 
@@ -22,29 +22,24 @@ class Rebond(PyoObject):
     >>> s.start()
     >>> src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
     >>> lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
-    >>> pot = PyoObjectTemplate(src, freq=[800,1000], mul=lfo).out()
+    >>> pot = Oscillation(src, freq=[800,1000], mul=lfo).out()
 
     """
-    def __init__(self, input, cs, base_interval=.5, outs=2, mul=1, add=0):
+    def __init__(self, input, cs, freq=500, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
         self._cs = cs
-        self._base_interval = base_interval
-        self._outs = outs
+        self._freq = freq
         self._in_fader = InputFader(input)
-        in_fader,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,base_interval,outs,mul,add)
-        self._check = Change(cs)
-        self._delay_seg = TrigLinseg(self._check, [(0,base_interval[0]),(4,base_interval[0] / 500)])
-        # Certain random dans le line segment
-        # Balayer un filtre en même temps 
-        self._panner = FastSine(freq=.8*((self._delay_seg*20)+1), mul=.5, add=.5)
-        self._count = Counter(self._check, min=5, max=10, dir=2)
-        # modulation du feedback
-        self._mod = SmoothDelay(in_fader, delay=self._delay_seg, feedback=self._count*.1, maxdelay=1, mul=cs)
-        self._clean = Sig(in_fader, mul=1)
-        self._comp = Compress(Mix([self._mod,self._clean]), thresh=-12, ratio=4, knee=0.5)
-        self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.3*(self._delay_seg*10))
-        self._out = Sig(self._pan, mul=mul, add=add)
+        in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
+        self._thresh = Thresh(self._input, threshold=-10., dir=0)
+        self._trig = TrigLinseg(self._thresh, [(0,0),(.5,1)])
+        self._shifter1 = Phasor(freq=2.2, phase=self._trig, mul=freq, add=freq)
+        self._shifter2 = Phasor(freq=2.8, phase=self._trig*-1, mul=freq, add=freq)
+        self._shift1 = FreqShift(in_fader, shift=self._shifter1)
+        self._shift2 = FreqShift(in_fader, shift=self._shifter2)
+        self._mod = Pan([self._shift1,self._shift2], outs=outs, pan=[0,1], spread=[.2,.2], mul=cs)
+        self._out = Sig(self._mod, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):
@@ -62,7 +57,7 @@ class Rebond(PyoObject):
         self._input = x
         self._in_fader.setInput(x, fadetime)
 
-    def setInterval(self, x):
+    def setFreq(self, x):
         """
         Replace the `freq` attribute.
 
@@ -72,7 +67,8 @@ class Rebond(PyoObject):
                 New `freq` attribute.
 
         """
-        self._base_interval = x
+        self._freq = x
+        self._mod.freq = x
 
     def play(self, dur=0, delay=0):
         self._mod.play(dur, delay)
@@ -87,7 +83,7 @@ class Rebond(PyoObject):
         return PyoObject.out(self, chnl, inc, dur, delay)
 
     def ctrl(self, map_list=None, title=None, wxnoserver=False):
-        self._map_list = [SLMap(10, 2000, "log", "interval", self._base_interval),
+        self._map_list = [SLMap(10, 2000, "log", "freq", self._freq),
                           SLMapMul(self._mul)]
         PyoObject.ctrl(self, map_list, title, wxnoserver)
 
@@ -100,17 +96,17 @@ class Rebond(PyoObject):
         self.setInput(x)
 
     @property
-    def interval(self):
+    def freq(self):
         """float or PyoObject. Frequency of the modulator."""
-        return self._base_interval
-    @interval.setter
-    def interval(self, x):
-        self.setInterval(x)
+        return self._freq
+    @freq.setter
+    def freq(self, x):
+        self.setFreq(x)
 
-# Run the script to test the PyoObjectTemplate object.
+# Run the script to test the Oscillation object.
 if __name__ == "__main__":
     s = Server().boot()
     src = SfPlayer(SNDS_PATH+"/transparent.aif", loop=True, mul=.3)
     lfo = Sine(.25, phase=[0,.5], mul=.5, add=.5)
-    pot = Rebond(src, cs=lfo, mul=lfo).out()
+    pot = Oscillation(src, freq=[800,1000], mul=lfo).out()
     s.gui(locals())

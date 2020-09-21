@@ -5,9 +5,10 @@ from inst.instruments import *
 from inst.Frottement import *
 from inst.Accumulation import *
 from inst.Rebond import *
+from inst.Oscillation import *
 from inst.FXBox import *
-from inst.RingMod import *
-from gridHandler import *
+# from inst.RingMod import *
+# from gridHandler import *
 import math
 import os, sys
 # import threading
@@ -20,7 +21,7 @@ SOUND_CARD = 'EXT'
 if NUM_OUTS == 2:
     if SOUND_CARD == 'EXT':
         s = Server(sr=48000, nchnls=NUM_OUTS, duplex=1, audio='pa')
-        s.setInOutDevice(0)
+        s.setInOutDevice(1)
         print('EXT')
     else:
         s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=0, audio='pa')
@@ -126,16 +127,23 @@ r1 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),drums.sig()]), trigs
 r2 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),drums.sig()]), trigs[5], toggles6, [SIGSNB[5],SIGSNB[13]], transpo, audioIN=drums.sig(), mul=MULPOW[5])
 r3 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),drums.sig()]), trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, audioIN=drums.sig(), mul=MULPOW[6])
 r4 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()]), trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, audioIN=drums.sig(), mul=MULPOW[7])
-### FIX : possible crash dans laa banque d'effet -> MoogLP > Reverb
+
+# interchanger fx avec technique d'écriture
 fxbox = FXBox([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], fxtoggles, [SIGSNB[16],SIGSNB[17],SIGSNB[18],SIGSNB[19]])
 
 fr = Frottement(Mix(fxbox), SIGSNB[20], freq=[3,20,.5,9], outs=NUM_OUTS)
 ### FIX : corriger le fonctionnement du traitement dans instruments
 ac = Accumulation(Mix(fxbox), SIGSNB[21], delay=.01, outs=NUM_OUTS)
-### ADD : prochaine technique d'écriture : rebond
+### ADD : ajout d'effet stylistique sur rebond
 re = Rebond(Mix(fxbox), SIGSNB[22], base_interval=.3, outs=NUM_OUTS)
 
-downmix = Mix([fr,ac,re], voices=NUM_OUTS, mul=.4).out(0)
+os = Oscillation(Mix(fxbox), SIGSNB[23], freq=50, outs=NUM_OUTS)
+
+### les techniques d'écritures influence-t-elle le jeu
+## faire une compairson A/B avec technique / sans technique
+### ajouter des jams
+
+downmix = Mix([fr,ac,re,os], voices=NUM_OUTS, mul=.3).out()
 
 # filtHP = ButLP(fr+ac, 5000).mix(2)
 # comp = Compress(filtHP, thresh=-20, ratio=4, risetime=.01, falltime=.2, knee=0.5).mix(NUM_OUTS).out(0)
