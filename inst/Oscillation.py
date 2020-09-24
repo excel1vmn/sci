@@ -38,7 +38,7 @@ class Oscillation(PyoObject):
         self._shifter2 = Phasor(freq=2.8, phase=self._trig*-1, mul=freq, add=freq)
         self._shift1 = FreqShift(in_fader, shift=self._shifter1)
         self._shift2 = FreqShift(in_fader, shift=self._shifter2)
-        self._mod = Pan([self._shift1,self._shift2], outs=outs, pan=[0,1], spread=[.2,.2], mul=cs)
+        self._mod = Pan([self._shift1,self._shift2], outs=outs, pan=[.15,.85], spread=[.2,.2], mul=cs)
         self._out = Sig(self._mod, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

@@ -46,10 +46,11 @@ class FXBox(PyoObject):
         self._fx.append(WGVerb(self._downmix, feedback=.85, bal=1, mul=Pow(cs[2],3)))
         self._fx.append(Mix(self._input, mul=Pow(4-(cs[0]+cs[1]+cs[2]+cs[3]), 3)))
 
-        self._filt = Biquad(self._fx, Pow(8000*(cs[3]+.1),3), q=cs[3]*50, mul=Pow(cs[3],3))
+        self._filt = Biquad(self._fx, Pow(18000*(cs[3]+.1),3), q=cs[3]*50, mul=Pow(cs[3],3))
         self._mod = Sig(self._filt)
         self._comp = Compress(self._mod, thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=0.5)
-        self._pan = Pan(self._comp, outs=outs[0], pan=.5, spread=.3)
+        self._panner = FastSine(freq=.03, mul=.4, add=.5)
+        self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.3)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

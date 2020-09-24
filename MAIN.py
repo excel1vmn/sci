@@ -20,8 +20,8 @@ SOUND_CARD = 'EXT'
 # SERVER SETUP
 if NUM_OUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=48000, nchnls=NUM_OUTS, duplex=1, audio='pa')
-        s.setInOutDevice(1)
+        s = Server(sr=48000, nchnls=NUM_OUTS, duplex=0, audio='pa')
+        s.setInOutDevice(0)
         print('EXT')
     else:
         s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=0, audio='pa')
@@ -111,6 +111,8 @@ n2 = Notein(poly=10, scale=0, first=0, last=127, channel=2)
 n3 = Notein(poly=10, scale=0, first=0, last=127, channel=3)
 n4 = Notein(poly=10, scale=0, first=0, last=127, channel=4)
 n10 = Notein(poly=24, scale=0, first=0, last=127, channel=10)
+### Sert à manipuler les gestes musicaux / techniques d'écriture ### 
+n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
 
 input1 = Input(chnl=0, mul=.7).mix(2)
 input2 = Input(chnl=1, mul=.7).mix(2)
@@ -131,23 +133,24 @@ r4 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3
 # interchanger fx avec technique d'écriture
 fxbox = FXBox([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], fxtoggles, [SIGSNB[16],SIGSNB[17],SIGSNB[18],SIGSNB[19]])
 
-fr = Frottement(Mix(fxbox), SIGSNB[20], freq=[3,20,.5,9], outs=NUM_OUTS)
+fr = Frottement(Mix(fxbox), SIGSNB[20], freq=[3,20,.5,9], outs=NUM_OUTS, mul=1)
 ### FIX : corriger le fonctionnement du traitement dans instruments
-ac = Accumulation(Mix(fxbox), SIGSNB[21], delay=.01, outs=NUM_OUTS)
+ac = Accumulation(Mix(fxbox), SIGSNB[21], delay=.01, outs=NUM_OUTS, mul=1)
 ### ADD : ajout d'effet stylistique sur rebond
-re = Rebond(Mix(fxbox), SIGSNB[22], base_interval=.3, outs=NUM_OUTS)
+re = Rebond(Mix(fxbox), SIGSNB[22], base_interval=.3, outs=NUM_OUTS, mul=1)
 
-os = Oscillation(Mix(fxbox), SIGSNB[23], freq=50, outs=NUM_OUTS)
+os = Oscillation(Mix(fxbox), SIGSNB[23], freq=50, outs=NUM_OUTS, mul=1)
 
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
 ### ajouter des jams
+equalizer = EQ(Mix([fr,ac,re,os,fxbox],2))
+equalizer.ctrl()
+spectrum = Spectrum(equalizer)
+downmix = Mix(equalizer, voices=NUM_OUTS, mul=.3).out()
 
-downmix = Mix([fr,ac,re,os], voices=NUM_OUTS, mul=.3).out()
 
-# filtHP = ButLP(fr+ac, 5000).mix(2)
-# comp = Compress(filtHP, thresh=-20, ratio=4, risetime=.01, falltime=.2, knee=0.5).mix(NUM_OUTS).out(0)
-
+### SERVER GRIS ###
 # sender = OscDataSend("iffffff", 18032, '/spat/serv')
 
 # msg = [0, 0, pi/2.1, 0.5, .2, 0, 0]
@@ -164,9 +167,12 @@ downmix = Mix([fr,ac,re,os], voices=NUM_OUTS, mul=.3).out()
 # sender.send(msg)
 # msg = [6, 0, pi/2, 1, 0, 0, 0]
 # sender.send(msg)
+### SERVER GRIS ###
 
+### MONOME GRID ###
 # t = threading.Thread(group=None, target=s.gui, args=[locals()])
 # t.start()
 # gridHandler = GridStudies(stepOn)
+### MONOME GRID ###
 
 s.gui(locals())
