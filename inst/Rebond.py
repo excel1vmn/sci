@@ -25,14 +25,15 @@ class Rebond(PyoObject):
     >>> pot = PyoObjectTemplate(src, freq=[800,1000], mul=lfo).out()
 
     """
-    def __init__(self, input, cs, base_interval=.5, outs=2, mul=1, add=0):
+    def __init__(self, input, notein, cs, base_interval=.5, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
+        self._notein = notein
         self._cs = cs
         self._base_interval = base_interval
         self._outs = outs
         self._in_fader = InputFader(input)
-        in_fader,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,base_interval,outs,mul,add)
+        in_fader,notein,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,base_interval,outs,mul,add)
         self._check = Change(cs)
         self._delay_seg = TrigLinseg(self._check, [(0,base_interval[0]),(3,base_interval[0] / 500)])
         # Certain random dans le line segment

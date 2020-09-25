@@ -133,18 +133,18 @@ r4 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3
 # interchanger fx avec technique d'écriture
 fxbox = FXBox([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], fxtoggles, [SIGSNB[16],SIGSNB[17],SIGSNB[18],SIGSNB[19]])
 
-fr = Frottement(Mix(fxbox), SIGSNB[20], freq=[3,20,.5,9], outs=NUM_OUTS, mul=1)
+fr = Frottement(Mix(fxbox), n0, SIGSNB[20], freq=[3,1.15,.5,.7,2.5,6,.04], outs=NUM_OUTS, mul=1)
 ### FIX : corriger le fonctionnement du traitement dans instruments
-ac = Accumulation(Mix(fxbox), SIGSNB[21], delay=.01, outs=NUM_OUTS, mul=1)
+ac = Accumulation(Mix(fxbox), n0, SIGSNB[21], delay=.01, outs=NUM_OUTS, mul=1)
 ### ADD : ajout d'effet stylistique sur rebond
-re = Rebond(Mix(fxbox), SIGSNB[22], base_interval=.3, outs=NUM_OUTS, mul=1)
+re = Rebond(Mix(fxbox), n0, SIGSNB[22], base_interval=.3, outs=NUM_OUTS, mul=1)
 
-os = Oscillation(Mix(fxbox), SIGSNB[23], freq=50, outs=NUM_OUTS, mul=1)
+os = Oscillation(Mix(fxbox), n0, SIGSNB[23], freq=50, outs=NUM_OUTS, mul=1)
 
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
 ### ajouter des jams
-equalizer = EQ(Mix([fr,ac,re,os,fxbox],2))
+equalizer = EQ(Mix([fr,ac,re,os],2))
 equalizer.ctrl()
 spectrum = Spectrum(equalizer)
 downmix = Mix(equalizer, voices=NUM_OUTS, mul=.3).out()

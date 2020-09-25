@@ -25,13 +25,14 @@ class Oscillation(PyoObject):
     >>> pot = Oscillation(src, freq=[800,1000], mul=lfo).out()
 
     """
-    def __init__(self, input, cs, freq=500, outs=2, mul=1, add=0):
+    def __init__(self, input, notein, cs, freq=500, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
+        self._notein = notein
         self._cs = cs
         self._freq = freq
         self._in_fader = InputFader(input)
-        in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
+        in_fader,notein,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,freq,mul,add)
         self._thresh = Thresh(self._input, threshold=-10., dir=0)
         self._trig = TrigLinseg(self._thresh, [(0,0),(.5,1)])
         self._shifter1 = Phasor(freq=2.2, phase=self._trig, mul=freq, add=freq)

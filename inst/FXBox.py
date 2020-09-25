@@ -41,6 +41,7 @@ class FXBox(PyoObject):
             self._voices.setAmp(i,0,0)
         self._downmix = Mix(self._voices)
         in_fader,cs,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,outs,mul,add)
+        cs[3].setValue(1)
         self._fx.append(Disto(self._downmix, drive=.9, slope=.8, mul=Pow(cs[0],3)))
         self._fx.append(FreqShift(self._downmix, shift=10, mul=Pow(cs[1],3)))
         self._fx.append(WGVerb(self._downmix, feedback=.85, bal=1, mul=Pow(cs[2],3)))
