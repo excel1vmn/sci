@@ -6,6 +6,7 @@ from inst.Frottement import *
 from inst.Accumulation import *
 from inst.Rebond import *
 from inst.Oscillation import *
+from inst.Flux import *
 from inst.FXBox import *
 # from inst.RingMod import *
 # from gridHandler import *
@@ -20,8 +21,8 @@ SOUND_CARD = 'EXT'
 # SERVER SETUP
 if NUM_OUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=48000, nchnls=NUM_OUTS, duplex=0, audio='pa')
-        s.setInOutDevice(0)
+        s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=0, audio='pa')
+        s.setInOutDevice(1)
         print('EXT')
     else:
         s = Server(sr=48000, buffersize=1024, nchnls=NUM_OUTS, duplex=0, audio='pa')
@@ -104,7 +105,9 @@ toggles6 = Midictl(ctlnumber=[13,21], channel=3)
 toggles7 = Midictl(ctlnumber=[14,22], channel=3)
 toggles8 = Midictl(ctlnumber=[15,23], channel=3)
 fxtoggles = Midictl(ctlnumber=[24,25,26,27,28,29,30,31], channel=3)
-drumsCS = Midictl(ctlnumber=[32,33,34,35], channel=3)
+gestetoggles = Midictl(ctlnumber=[32,33,34,35,36,37,38,39,
+                                  40,41,42,43,44,45,46,47], channel=3)
+drumsCS = Midictl(ctlnumber=[48,49], channel=3)
 
 n1 = Notein(poly=10, scale=0, first=0, last=127, channel=1)
 n2 = Notein(poly=10, scale=0, first=0, last=127, channel=2)
@@ -133,22 +136,36 @@ r4 = ReSampler(n4, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3
 # interchanger fx avec technique d'écriture
 fxbox = FXBox([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], fxtoggles, [SIGSNB[16],SIGSNB[17],SIGSNB[18],SIGSNB[19]])
 
-fr = Frottement(Mix(fxbox), n0, SIGSNB[20], freq=[3,1.15,.5,.7,2.5,6,.04], outs=NUM_OUTS, mul=1)
-### FIX : corriger le fonctionnement du traitement dans instruments
-ac = Accumulation(Mix(fxbox), n0, SIGSNB[21], delay=.01, outs=NUM_OUTS, mul=1)
-### ADD : ajout d'effet stylistique sur rebond
-re = Rebond(Mix(fxbox), n0, SIGSNB[22], base_interval=.3, outs=NUM_OUTS, mul=1)
+fader = Sig([1,1,1,0,1])
+fader.ctrl()
 
-os = Oscillation(Mix(fxbox), n0, SIGSNB[23], freq=50, outs=NUM_OUTS, mul=1)
+fr = Frottement(Mix(fxbox), n0, SIGSNB[20], freq=[3,1.15,.5,.7,2.5,6,.04], outs=NUM_OUTS, mul=fader[0])
+### FIX : corriger le fonctionnement du traitement dans instruments
+ac = Accumulation(Mix(fxbox), n0, SIGSNB[21], delay=.01, outs=NUM_OUTS, mul=fader[1])
+### ADD : ajout d'effet stylistique sur rebond
+re = Rebond(Mix(fxbox), n0, SIGSNB[22], base_interval=.3, outs=NUM_OUTS, mul=fader[2])
+
+os = Oscillation(Mix(fxbox), n0, SIGSNB[23], freq=50, outs=NUM_OUTS, mul=fader[3])
+
+fl = Flux(Mix(fxbox), n0, SIGSNB[23], freq=50, outs=NUM_OUTS, mul=fader[4])
+
+### SIDE CHAIN ###
+inputFollow = Follower(Mix([fr,ac,re,os,fl]), freq=20)
+talk = inputFollow > .5
+followAmp = Port(talk, risetime=.005, falltime=.001)
+ampscl = Scale(followAmp, outmin=1, outmax=.05)
+
+clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUM_OUTS), thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5, mul=ampscl)
+
+# clean_sig = Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUM_OUTS, mul=ampscl)
 
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
 ### ajouter des jams
-equalizer = EQ(Mix([fr,ac,re,os],2))
+equalizer = EQ(Mix([fr,ac,re,os,fl,clean_sig],2))
 equalizer.ctrl()
 spectrum = Spectrum(equalizer)
 downmix = Mix(equalizer, voices=NUM_OUTS, mul=.3).out()
-
 
 ### SERVER GRIS ###
 # sender = OscDataSend("iffffff", 18032, '/spat/serv')

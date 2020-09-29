@@ -25,13 +25,18 @@ class Flux(PyoObject):
     >>> pot = Flux(src, freq=[800,1000], mul=lfo).out()
 
     """
-    def __init__(self, input, freq=100, mul=1, add=0):
+    def __init__(self, input, notein, cs, freq=500, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
+        self._notein = notein
+        self._cs = cs
         self._freq = freq
         self._in_fader = InputFader(input)
-        in_fader,freq,mul,add,lmax = convertArgsToLists(self._in_fader,freq,mul,add)
-        self._mod = Sine(freq=freq, mul=in_fader)
+        in_fader,notein,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,freq,mul,add)
+        self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
+
+        self._noise = Noise()
+        self._mod = Freeverb(in_fader, size=[.81,.83], damp=.2, bal=1, mul=self._amp*cs)
         self._out = Sig(self._mod, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
