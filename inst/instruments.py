@@ -5,7 +5,7 @@ from pyo import *
 import math
 
 class Synth:
-    def __init__(self, noteinput, trig, toggles, cs, transpo=1, hfdamp=5000, lfofreq=0.2, audioIN=0, mul=1):
+    def __init__(self, noteinput, trig, toggles, cs, transpo=1, hfdamp=15000, lfofreq=0.2, audioIN=0, mul=1):
         self.note = noteinput
         self.trig = trig
         self.trigCheck = Select(self.trig, 1)
@@ -195,7 +195,7 @@ class Simpler:
         self.lfo = Sine(lfofreq, phase=[random.random(), random.random()]).range(250, 4000)
         self.notch = ButBR(self.damp, self.lfo).mix(1)
         self.hp = ButHP(self.notch, 50).mix(1)
-        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
+        self.comp = Compress(self.hp, thresh=-12, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
         self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.ampLfo, spread=.3, mul=mul)
 
     def out(self):
@@ -273,7 +273,7 @@ class WaveShape:
         self.interp = Interp(self.mix, self.look, self.veltrand)
         self.damp = ButLP(self.look, freq=hfdamp).mix(1)
         self.hp = ButHP(self.damp, 50).mix(1)
-        self.comp = Compress(self.hp, thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
+        self.comp = Compress(self.hp, thresh=-12, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
         self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.ampLfo, spread=.5, mul=mul)
 
     def out(self):
@@ -397,7 +397,7 @@ class ReSampler:
         self.dist = Disto(self.loop, drive=self.cs[1], slope=self.trMod).mix(1)
         self.damp = ButLP(self.dist, freq=hfdamp).mix(1)
         self.bal = Balance(self.damp, self.refSine, freq=20).mix(1)
-        self.comp = Compress(self.bal, thresh=-15, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
+        self.comp = Compress(self.bal, thresh=-12, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
         self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.fs1, spread=self.valVel, mul=mul)
 
     def out(self):
@@ -463,93 +463,3 @@ class ReSampler:
             self.pitch1.stop()
             self.pitch2.play()
             self.dur1.stop()
-
-class EffectBox:
-    def __init__(self, input, toggles, cs, channel=1, mul=1):
-        # self.input = Mix(input, voices=2)
-        self.input = input
-        self.toggles = toggles
-        self.cs = Sig(cs)
-        self.fx = []
-
-        self.check = Change(self.toggles)
-        self.toggleChange = TrigFunc(self.check, self.toggleFX)
-
-        self.mixer = Mixer(outs=9)
-        for i in range(9):
-            self.mixer.addInput(i, self.input[i])
-            self.mixer.setAmp(i,0,0)
-
-        self.downmix = Mix(self.mixer)
-        print(self.input)
-
-        # TRANSFER FUNCTION
-        # self.table = ExpTable([(0,-.25),(4096,0),(8192,0)], exp=30)
-        # self.high_table = ExpTable([(0,1),(2000,1),(4096,0),(4598,0),(8192,0)],
-        #                     exp=5, inverse=False)
-        # self.high_table.reverse()
-        # self.table.add(self.high_table)
-        # self.table.view(title="Transfert function")
-        # self.bp = ButBP(self.mix, freq=400, q=3)
-        # self.boost = Sig(self.bp, mul=25)
-        # self.lookShape = Lookup(self.table, self.boost)
-        # self.lp = ButLP(self.lookShape, freq=3000, mul=.7)
-        # self.mixed = Interp(self.mix, self.lp, interp=0)
-        # TRANSFER FUNCTION
-
-        self.fx.append(Disto(self.downmix, drive=.9, slope=.8, mul=Pow(self.cs[0],3)))
-        self.fx.append(FreqShift(Mix(self.downmix+self.fx[0]), shift=10*((self.fx[0]*.2)+1), mul=Pow(self.cs[1],3)))
-        self.fx.append(WGVerb(self.downmix, feedback=[.74,.75], cutoff=5000, bal=1, mul=Pow(self.cs[2],3)))
-        self.fx.append(MoogLP(self.downmix, Pow(12000*(self.cs[3]+.001),3), res=0, mul=Pow(self.cs[3],3)))
-
-        self.comp = Compress(Mix(self.fx), thresh=-20, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
-        self.p = Pan(self.comp, outs=2, pan=.5, spread=.4, mul=mul)
-
-    def out(self):
-        self.p.out()
-        return self
-
-    def sig(self):
-        return self.p
-        
-    def toggleFX(self):
-        if Sig(self.toggles[0]).get() == 1:
-            self.mixer.setAmp(0,0,1)
-            print('sup')
-        else:
-            self.mixer.setAmp(0,0,0)
-
-        if Sig(self.toggles[1]).get() == 1:
-            self.mixer.setAmp(1,0,1)
-        else:
-            self.mixer.setAmp(1,0,0)
-
-        if Sig(self.toggles[2]).get() == 1:
-            self.mixer.setAmp(2,0,1)
-        else:
-            self.mixer.setAmp(2,0,0)
-
-        if Sig(self.toggles[3]).get() == 1:
-            self.mixer.setAmp(3,0,1)
-        else:
-            self.mixer.setAmp(3,0,0)
-
-        if Sig(self.toggles[4]).get() == 1:
-            self.mixer.setAmp(4,0,1)
-        else:
-            self.mixer.setAmp(4,0,0)
-
-        if Sig(self.toggles[5]).get() == 1:
-            self.mixer.setAmp(5,0,1)
-        else:
-            self.mixer.setAmp(5,0,0)
-
-        if Sig(self.toggles[6]).get() == 1:
-            self.mixer.setAmp(6,0,1)
-        else:
-            self.mixer.setAmp(6,0,0)
-
-        if Sig(self.toggles[7]).get() == 1:
-            self.mixer.setAmp(7,0,1)
-        else:
-            self.mixer.setAmp(7,0,0)

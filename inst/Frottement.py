@@ -29,7 +29,8 @@ class Frottement(PyoObject):
 
         self._numINs = len(in_fader)
         self._check = Change(cs)
-        self._trigenv = TrigLinseg(self._check, [(0,0),(.05,1.5),(1,.9),(2,0)])
+        self._thresh = Thresh(cs, threshold=.5, dir=0)
+        self._trigenv = TrigLinseg(self._check, [(0,0),(.05,1.5),(1,.9),(2,.5),(5,0)])
         self._rlfo = RandDur(min=freq, max=freq*10)
         self._noise = Allpass2(Noise(self._trigenv), freq=200*(2000*self._trigenv), bw=200*(2000*self._trigenv), mul=.4, add=.5)
 
@@ -49,7 +50,7 @@ class Frottement(PyoObject):
         self._lfoFreq = []
         for i in range(len(freq)):
             self._lfoFreq.append(freq[i]*self._rlfo[i])
-        self._lfo = FastSine(freq=self._lfoFreq*10, mul=.3*self._trigenv, add=.5)
+        self._lfo = FastSine(freq=self._lfoFreq*10, mul=.5*self._trigenv, add=.5)
         self._mod = MultiBand(self._dis, num=len(freq), mul=self._lfo*cs)
 
         # Output chain
