@@ -8,6 +8,7 @@ from inst.Rebond import *
 from inst.Oscillation import *
 from inst.Flux import *
 from inst.Balancement import *
+from inst.Flexion import *
 # from inst.RingMod import *
 # from gridHandler import *
 import math
@@ -61,38 +62,47 @@ for names in itemK:
 print(snds)
 print(drum_kit)
 
+### MIDI PARAMETERS ###
 def ctl_scan(ctlnum, midichnl):
     print(ctlnum, midichnl)
-ctlscan = CtlScan2(ctl_scan, True)
+    print(HP.boost.get())
+ctlscan = CtlScan2(ctl_scan, False)
 
-# def event(status, data1, data2):
-#     print(status, data1, data2)
-# raw = RawMidi(event)
+def event(status, data1, data2):
+    print(status, data1, data2)
+raw = RawMidi(event)
 
 #--- LAUNCH CONTROL XL ---#
 MULPOW = Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 5)
 SIGSNB = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                             29,30,31,32,33,34,35,36,
                             49,50,51,52,53,54,55,56], 
-                      init=[0, 0, 0, 0, 0, 0, 0 ,0 ,
-                            0, 0, 0, 0, 0, 0, 0 ,0 ,
-                            0, 0, 0, 0, 0,.5, 0, 1 ], channel=6)
+                      init=[ 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0], channel=6)
+# SIGTRIG = Midictl(ctlnumber=[41,42,43,44,57,58,59,60,
+#                              73,74,75,76,89,90,91,92],
+#                       init=[ 0, 0, 0, 0, 0, 0, 0, 0,
+#                              0, 0, 0, 0, 0, 0, 0, 0,], channel=6)
 #--- LAUNCH CONTROL XL ---#
+
+# check = Change(SIGTRIG)
+# p=Print(SIGTRIG, 1)
 
 #--- NAKED BOARDS ---#
 # MULPOW = Pow(Midictl(ctlnumber=[0,1,2,3,4,5,6,7], init=0, channel=1), 5)
-# SIGSNB = Midictl(ctlnumber=[8 ,9 ,10,11,12,13,14,15,
+# SIGSNB = Midictl(ctlnumber=[ 8, 9,10,11,12,13,14,15,
 #                             16,17,18,19,20,21,22,23,
 #                             24,25,26,27,28,29,30,31], 
-#                       init=[0, 0, 0, 0, 0, 0, 0 ,0 ,
-#                             0, 0, 0, 0, 0, 0, 0 ,0 ,
-#                             0, 0, 0, 0, 0, 1, 0, 1 ], channel=1)
+#                       init=[ 0, 0, 0, 0, 0, 0, 0 ,0,
+#                              0, 0, 0, 0, 0, 0, 0 ,0,
+#                              0, 0, 0, 0, 0, 0, 0, 0], channel=1)
 #--- NAKED BOARDS ---#
 
 transpo = Bendin(brange=2, scale=1, channel=1)
 # High frequency damping mapped to controller number 1.
 hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=15000, init=15000, channel=3)
-lfdamp = Midictl(ctlnumber=48, minscale=-24, maxscale=6, init=0, channel=3)
+lfdamp = Midictl(ctlnumber=48, minscale=-24, maxscale=24, init=0, channel=3)
 # Frequency of the LFO applied to the speed of the moving notches.
 # lfofreq = Midictl(ctlnumber=13, minscale=0.1, maxscale=20, init=0.2, channel=6)
 # Toggles certain parameters of ReSampler class instruments 
@@ -116,9 +126,13 @@ n4 = Notein(poly=10, scale=0, first=0, last=127, channel=4)
 n10 = Notein(poly=24, scale=0, first=0, last=127, channel=10)
 ### Sert à manipuler les gestes musicaux / techniques d'écriture ### 
 n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
+### MIDI PARAMETERS ###
 
+
+### EXTERNAL INPUT ###
 # input1 = Input(chnl=0, mul=.7).mix(2)
 # input2 = Input(chnl=1, mul=.7).mix(2)
+### EXTERNAL INPUT ###
 
 drums = Drums(n10, drum_kit, cs=gestetoggles, transpo=transpo)
 
@@ -135,9 +149,10 @@ r4 = ReSampler(n3, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3
 
 prefx = Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUM_OUTS)
 
-fader = Sig([1,1,1,1,1,1])
+fader = Sig([1,1,1,1,1,1,1])
 fader.ctrl()
 
+### TECHNIQUE D'ÉCRITURE ###
 fr = Frottement(Mix(prefx), n0, SIGSNB[16], freq=[3,1.15,.5,.7,2.5,6,.04], outs=NUM_OUTS, mul=fader[0])
 ### FIX : corriger le fonctionnement du traitement dans instruments
 ac = Accumulation(Mix(prefx), n0, SIGSNB[17], delay=.005, outs=NUM_OUTS, mul=fader[1])
@@ -150,8 +165,11 @@ fl = Flux(Mix(prefx), n0, SIGSNB[20], freq=50, outs=NUM_OUTS, mul=fader[4])
 
 ba = Balancement(Mix(prefx), n0, SIGSNB[21], freq=50, outs=NUM_OUTS, mul=fader[5])
 
+fe = Flexion(Mix(prefx), n0, SIGSNB[22], freq=50, outs=NUM_OUTS, mul=fader[6])
+### TECHNIQUE D'ÉCRITURE ###
+
 ### SIDE CHAIN ###
-inputFollow = Follower(Mix([fr,ac,re,os,fl,ba], NUM_OUTS), freq=20)
+inputFollow = Follower(Mix([fr,ac,re,os,fl,ba,fe], NUM_OUTS), freq=20)
 talk = inputFollow > .005
 followAmp = Port(talk, risetime=.005, falltime=.001)
 ampscl = Scale(followAmp, outmin=1, outmax=.05)
@@ -161,8 +179,8 @@ clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
 ### ajouter des jams
-# LP = ButLP(Mix([fr,ac,re,os,fl,ba,clean_sig], NUM_OUTS), freq=Pow((slider*5000)+20, 3))
-HP = EQ(Mix([fr,ac,re,os,fl,ba,clean_sig],2), freq=500, q=.1, boost=lfdamp, type=1)
+# LP = ButLP(Mix([fr,ac,re,os,fl,ba,fe,clean_sig], NUM_OUTS), freq=Pow((slider*5000)+20, 3))
+HP = EQ(Mix([fr,ac,re,os,fl,ba,fe,clean_sig],2), freq=500, q=.1, boost=lfdamp, type=1)
 COMP = Compress(HP, thresh=-12, ratio=4, knee=.5)
 downmix = Mix(COMP, voices=NUM_OUTS, mul=.3).out()
 spectrum = Spectrum(downmix)

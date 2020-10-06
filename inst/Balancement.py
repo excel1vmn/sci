@@ -37,13 +37,15 @@ class Balancement(PyoObject):
         self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
 
         # ça mais pour un chagement de pitch 50 -> 500 graduel...
-        self._modulator = Sine(freq=2, mul=200, add=200)
+        self._mod1 = FastSine(freq=.01, mul=notein['pitch'], add=notein['pitch'])
+        self._mod2 = FastSine(freq=.3*self._mod1, mul=.5, add=.5)
+        self._mod3 = FastSine(freq=.07, mul=cs)
         # self._pitchLin = TrigLinseg(notein['trigon'], [(0,0),(2,10),(4,1),(6,12),(8,0)])
         self._trigL = TrigLinseg(notein['trigon'], [(0,0),(2,100),(4,10),(6,120),(8,0)]) 
         self._trigR = TrigLinseg(notein['trigon'], [(0,0),(2,10),(4,100),(6,12),(8,0)])
-        self._freqShift = FreqShift(in_fader, shift=[self._trigL,self._trigR])
+        self._freqShift = FreqShift(in_fader, shift=[self._trigL,self._trigR], mul=cs)
         self._comp = Compress(self._freqShift, thresh=-12, ratio=4, knee=.5)
-        self._mod = Pan(self._comp, outs=outs, pan=cs, spread=[.3,.3])
+        self._mod = Pan(self._comp, outs=outs, pan=self._mod2*self._mod3, spread=[.3,.3])
         self._out = Sig(self._mod, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
