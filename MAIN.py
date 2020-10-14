@@ -9,6 +9,7 @@ from inst.Oscillation import *
 from inst.Flux import *
 from inst.Balancement import *
 from inst.Flexion import *
+from inst.PercussionResonance import *
 # from inst.RingMod import *
 # from gridHandler import *
 import math
@@ -16,8 +17,9 @@ import os, sys
 # import threading
 # import keyboard
 
+NAME = "MITÉ (Module d'interprétation de techniques d'écriture)"
 NUM_OUTS = 2
-SOUND_CARD = 'EXT'
+SOUND_CARD = 'EXT' 
 
 # SERVER SETUP
 if NUM_OUTS == 2:
@@ -35,11 +37,14 @@ else:
     print('JACK')
 
 # LINUX AUDIO/MIDI CONFIG
-s.setMidiInputDevice(99)
-# s.setMidiOutputDevice(99)
-pa_list_devices()
-# pm_list_devices()
+def scanMidi():
+    s.setMidiInputDevice(99)
+    # s.setMidiOutputDevice(99)
+    pa_list_devices()
+    pm_list_devices()
+    print('scanned')
 
+scanMidi()
 s.boot().start()
 s.amp = 1
 
@@ -59,17 +64,21 @@ for names in itemK:
     if names.endswith(".aif") | names.endswith(".wav"):
         drum_kit.append("drum_kit/" + names)
 
+impulseR = "snds/BatteryBenson.wav"
+
 print(snds)
 print(drum_kit)
 
 ### MIDI PARAMETERS ###
 def ctl_scan(ctlnum, midichnl):
     print(ctlnum, midichnl)
-    print(HP.boost.get())
+    # print(HP.boost.get())
 ctlscan = CtlScan2(ctl_scan, False)
 
 def event(status, data1, data2):
-    print(status, data1, data2)
+    # print(status, data1, data2)
+    if data1 == 105 and data2 == 127:
+        scanMidi()
 raw = RawMidi(event)
 
 #--- LAUNCH CONTROL XL ---#
@@ -101,7 +110,7 @@ SIGSNB = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
 
 transpo = Bendin(brange=2, scale=1, channel=1)
 # High frequency damping mapped to controller number 1.
-hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=15000, init=15000, channel=3)
+hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=10000, init=10000, channel=3)
 lfdamp = Midictl(ctlnumber=48, minscale=-24, maxscale=24, init=0, channel=3)
 # Frequency of the LFO applied to the speed of the moving notches.
 # lfofreq = Midictl(ctlnumber=13, minscale=0.1, maxscale=20, init=0.2, channel=6)
@@ -134,6 +143,8 @@ n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
 # input2 = Input(chnl=1, mul=.7).mix(2)
 ### EXTERNAL INPUT ###
 
+pre_output = Mixer(outs=NUM_OUTS, chnls=1)
+
 drums = Drums(n10, drum_kit, cs=gestetoggles, transpo=transpo)
 
 a1 = Synth(n2, trigs[0], toggles1, [SIGSNB[0],SIGSNB[8]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[0])
@@ -142,14 +153,15 @@ a3 = Simpler(n2, snds[1], trigs[2], toggles3, [SIGSNB[2],SIGSNB[10]], transpo, h
 a4 = WaveShape(n2, snds[9], trigs[3], toggles4, [SIGSNB[3],SIGSNB[11]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[3])
 
 ### ADD : 1 autre bouton de changement de style de jeu
-r1 = ReSampler(n3, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),drums.sig()]), trigs[4], toggles5, [SIGSNB[4],SIGSNB[12]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[4])
-r2 = ReSampler(n3, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),drums.sig()]), trigs[5], toggles6, [SIGSNB[5],SIGSNB[13]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[5])
-r3 = ReSampler(n3, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),drums.sig()]), trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[6])
-r4 = ReSampler(n3, Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()]), trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[7])
+### Prend le signal traité avant la sorti ###
+r1 = ReSampler(n3, Mix(pre_output, NUM_OUTS), trigs[4], toggles5, [SIGSNB[4],SIGSNB[12]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[4])
+r2 = ReSampler(n3, Mix(pre_output, NUM_OUTS), trigs[5], toggles6, [SIGSNB[5],SIGSNB[13]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[5])
+r3 = ReSampler(n3, Mix(pre_output, NUM_OUTS), trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[6])
+r4 = ReSampler(n3, Mix(pre_output, NUM_OUTS), trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, hfdamp=hfdamp, audioIN=drums.sig(), mul=MULPOW[7])
 
 prefx = Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUM_OUTS)
 
-fader = Sig([1,1,1,1,1,1,1])
+fader = Sig([1,1,1,1,1,1,1,1])
 fader.ctrl()
 
 ### TECHNIQUE D'ÉCRITURE ###
@@ -166,11 +178,13 @@ fl = Flux(Mix(prefx), n0, SIGSNB[20], freq=50, outs=NUM_OUTS, mul=fader[4])
 ba = Balancement(Mix(prefx), n0, SIGSNB[21], freq=50, outs=NUM_OUTS, mul=fader[5])
 
 fe = Flexion(Mix(prefx), n0, SIGSNB[22], freq=50, outs=NUM_OUTS, mul=fader[6])
+
+pr = PercussionResonance(Mix(prefx), n0, SIGSNB[23], ir=impulseR, freq=MToF(n0['pitch']), outs=NUM_OUTS, mul=fader[7])
 ### TECHNIQUE D'ÉCRITURE ###
 
 ### SIDE CHAIN ###
-inputFollow = Follower(Mix([fr,ac,re,os,fl,ba,fe], NUM_OUTS), freq=20)
-talk = inputFollow > .005
+inputFollow = Follower(Mix([fr,ac,re,os,fl,ba,fe,pr], NUM_OUTS), freq=20)
+talk = inputFollow > .05
 followAmp = Port(talk, risetime=.005, falltime=.001)
 ampscl = Scale(followAmp, outmin=1, outmax=.05)
 
@@ -180,9 +194,12 @@ clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),
 ## faire une compairson A/B avec technique / sans technique
 ### ajouter des jams
 # LP = ButLP(Mix([fr,ac,re,os,fl,ba,fe,clean_sig], NUM_OUTS), freq=Pow((slider*5000)+20, 3))
-HP = EQ(Mix([fr,ac,re,os,fl,ba,fe,clean_sig],2), freq=500, q=.1, boost=lfdamp, type=1)
+HP = EQ(Mix([fr,ac,re,os,fl,ba,fe,pr,clean_sig],2), freq=500, q=.1, boost=lfdamp, type=1)
 COMP = Compress(HP, thresh=-12, ratio=4, knee=.5)
 downmix = Mix(COMP, voices=NUM_OUTS, mul=.3).out()
+pre_output.addInput(0, downmix)
+pre_output.setAmp(0, 0, 1)
+pre_output.setAmp(0, 1, 1)
 spectrum = Spectrum(downmix)
 
 ### SERVER GRIS ###

@@ -26,7 +26,7 @@ class Frottement(PyoObject):
         self._outs = outs
         self._in_fader = InputFader(input)
         in_fader,notein,cs,freq,outs,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,freq,outs,mul,add)
-
+        self._isON = Sig(cs) > .05
         self._numINs = len(in_fader)
         self._check = Change(cs)
         self._thresh = Thresh(cs, threshold=.5, dir=0)
@@ -52,6 +52,8 @@ class Frottement(PyoObject):
             self._lfoFreq.append(freq[i]*self._rlfo[i])
         self._lfo = FastSine(freq=self._lfoFreq*10, mul=.5*self._trigenv, add=.5)
         self._mod = MultiBand(self._dis, num=len(freq), mul=self._lfo*cs)
+
+        ### AJOUTE UNE CHAINE DE TRAITEMENT EN GRANULATION ### 
 
         # Output chain
         self._comp = Compress(self._mod, thresh=-12, ratio=4, knee=.5)
