@@ -40,11 +40,8 @@ class Frottement(PyoObject):
                             exp=5, inverse=False)
         self._high_table.reverse()
         self._table.add(self._high_table)
-        # self._table.view(title="Transfert function")
-        self._bp = ButBP(in_fader, freq=400, q=2)
-        self._boost = Sig(self._bp, mul=25)
-        self._lookShape = Lookup(self._table, self._boost)
-        self._dis = Disto(self._lookShape, drive=self._noise, slope=.95, mul=self._trigenv)
+        self._lookShape = Lookup(self._table, in_fader)
+        self._dis = Disto(self._lookShape, drive=self._noise, slope=.55, mul=self._trigenv)
 
         # Multiband chain
         self._lfoFreq = []
@@ -57,7 +54,7 @@ class Frottement(PyoObject):
 
         # Output chain
         self._comp = Compress(self._mod, thresh=-12, ratio=4, knee=.5)
-        self._panner = FastSine(freq=self._trigenv, mul=self._trigenv, add=.5)
+        self._panner = FastSine(freq=freq*self._trigenv, mul=self._trigenv, add=.5)
         self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.5)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()

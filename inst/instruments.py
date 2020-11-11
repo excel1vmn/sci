@@ -17,15 +17,14 @@ class Synth:
         self.transpo = Sig(transpo)
         self.input = Sig(audioIN).stop()
 
-        self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
 
         self.sigRand = SigTo(TrigRand(self.note['trigon'], .01, 10))
         self.panLfo = FastSine(self.sigRand, quality=0, mul=.5, add=.5)
         self.te = ExpTable([(0,0),(4096,1),(8192,0)], exp=3, inverse=True)
-        self.logOsc = Osc(table=self.te, freq=20*(self.cs[1]+2))
-        self.fs = FastSine(freq=self.logOsc, mul=self.cs[1])
+        self.logOsc = Osc(table=self.te, freq=15*(self.cs[1]+2))
+        self.fs = FastSine(freq=self.logOsc, mul=self.cs[1], add=1)
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -37,15 +36,14 @@ class Synth:
 
         self.osc1 = FastSine(self.sigRand, mul=self.cs[1])
         self.osc2 = FastSine(self.sigRand*.98, mul=self.cs[1])
-        self.cfm = CrossFM(carrier=self.pit, ratio=Mix([self.osc1,self.osc2]), ind1=self.cs[0]*50, ind2=self.fs, mul=self.amp)
-        self.mix = Mix(self.cfm)
+        self.cfm = CrossFM(carrier=self.pit, ratio=Mix([self.osc1,self.osc2]), ind1=self.cs[0]*50, ind2=Sig(self.cs[0])*self.fs, mul=self.amp)
 
         # self.lfoAmp = FastSine(.1, quality=0, mul=800, add=800)
         self.lfo = Sine(lfofreq, phase=[random.random(),random.random()], mul=1, add=3000)
-        self.damp = ButLP(self.mix, freq=hfdamp).mix(1)
+        self.damp = ButLP(self.cfm.mix(), freq=hfdamp).mix(1)
         self.notch = ButBR(self.damp, self.lfo).mix(1)
         self.hp = ButHP(self.notch, 50).mix(1)
-        self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.panLfo, spread=.5, mul=mul)
+        self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.panLfo, spread=.1, mul=mul)
 
     def out(self):
         self.p.out()
@@ -87,7 +85,6 @@ class FreakSynth:
         self.transpo = Sig(transpo)
         self.input = Sig(audioIN).stop()
 
-        self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.2)
 
@@ -96,12 +93,10 @@ class FreakSynth:
 
         self.blitLfo = FastSine(self.valVel * (self.cs[1]*500), quality=0, mul=self.cs[1]*2)
         self.harmLfo = FastSine(self.pit, quality=0, mul=(self.cs[1]*20)+1, add=(self.cs[1]*50)+20)
-        self.ampLfo = FastSine((self.valVel*50)*(self.trand*5), quality=0, add=.5)
+        self.panLFO = FastSine((self.valVel*50)*(self.trand*5), quality=0, mul=.5, add=.5)
 
-        self.blit = Blit(freq=[self.pit,self.pit*.98]*self.blitLfo, harms=self.harmLfo).mix(1)
-        self.cfm = CrossFM(carrier=self.pit, ratio=self.blit*((self.cs[0]*10)+1), ind1=self.cs[0]*2, ind2=self.cs[0]*5, mul=self.amp).mix(1)
-
-        self.mix = Mix(self.cfm)
+        self.blit = Blit(freq=[self.pit,self.pit*.98]*self.blitLfo, harms=self.harmLfo).mix()
+        self.cfm = CrossFM(carrier=self.pit, ratio=self.blit*((self.cs[0]*10)+1), ind1=self.cs[0]*2, ind2=self.cs[0]*5, mul=self.amp)
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -111,10 +106,10 @@ class FreakSynth:
         # SIDECHAIN #
 
         self.lfo = Sine(lfofreq, phase=[random.random(), random.random()]).range(240, 4000)
-        self.damp = ButLP(self.mix, freq=hfdamp).mix(1)
+        self.damp = ButLP(self.cfm.mix(), freq=hfdamp).mix(1)
         self.notch = ButBR(self.damp, self.lfo).mix(1)
         self.hp = ButHP(self.notch, 50).mix(1)
-        self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.ampLfo, spread=.5, mul=mul)
+        self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.panLFO, spread=.2, mul=mul)
 
     def out(self):
         self.p.out()
@@ -163,26 +158,25 @@ class Simpler:
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
         self.ampLfo = FastSine(((self.cs[0]*20)+1), quality=0, mul=.5, add=.5)
 
-        self.h = HarmTable([1,0,4,0,.2,0,.143,0,.111])
-        self.oscH = Osc(self.h, self.pit, mul=self.cs[1])
+        self.phasor = Phasor(freq=Sig(self.pit), mul=self.cs[1]*10)
 
         if type(self.paths) is list:
             print(self.paths)
             self.t = []
             self.voices = []
             self.toMorph = []
-            for i in range(6):
+            for i in range(3):
                 self.t.append(SndTable(self.paths[i], initchnls=2))
-            self.lfo = Sine(self.tra*self.bend, mul=.5, add=.5)
-            self.nt = NewTable(length=8192./48000, chnls=2)
-            self.Tmorph = TableMorph(self.lfo*self.oscH, self.nt, self.t)
-            self.oscT = OscTrig(self.nt, self.note['trigon'], self.tra, mul=self.amp*self.oscH).mix(2)
+            self.lfo = Sine(self.tra*self.bend, mul=.5*self.phasor, add=.5)
+            self.nt = NewTable(length=22050./44100, chnls=2)
+            self.Tmorph = TableMorph(self.lfo, self.nt, self.t)
+            self.oscT = OscTrig(self.nt, self.note['trigon'], self.tra, mul=self.amp)
             print('Simpler: is list')
         else: 
             self.t = SndTable(self.paths, initchnls=2)
             self.freq = self.t.getRate()
             self.dur = self.t.getDur()
-            self.oscT = OscTrig(self.t, self.note['trigon'], (self.freq*self.tra), mul=self.amp).mix(1)
+            self.oscT = OscTrig(self.t, self.note['trigon'], (self.freq*self.tra), mul=self.amp)
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -191,7 +185,7 @@ class Simpler:
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 
-        self.damp = ButLP(self.oscT, freq=hfdamp).mix(1)
+        self.damp = ButLP(self.oscT.mix(), freq=hfdamp).mix(1)
         self.lfo = Sine(lfofreq, phase=[random.random(), random.random()]).range(250, 4000)
         self.notch = ButBR(self.damp, self.lfo).mix(1)
         self.hp = ButHP(self.notch, 50).mix(1)
@@ -207,10 +201,10 @@ class Simpler:
 
     def shuffleSamples(self):
         if type(self.paths) is list:
-            self.newsound = math.floor(random.uniform(0,len(self.paths)))
-            self.t.setSound(self.paths[self.newsound])
-            print(self.paths[self.newsound])
-            print(self.newsound)
+            for i in range(3):
+                self.newsound = self.paths[math.floor(random.uniform(0,len(self.paths)))]
+                self.t[i].setSound(self.newsound)
+                print(self.newsound)
 
     def toggleFX(self):
         if Sig(self.toggles[0]).get() == 1:
@@ -251,17 +245,24 @@ class WaveShape:
         self.pit = MToF(self.note['pitch']) * self.transpo
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.25)
 
-        self.veltrand = TrigRand(self.note['trigon'], .1, self.note['velocity'] * 10)
+        self.veltrand = TrigRand(self.note['trigon'], .1, 10)
         self.ampLfo = FastSine(self.veltrand, quality=0, mul=.5, add=.5)
 
         self.t = HarmTable([1,0,.33,0,.2,0,.143,0,.111,0,.091])
-        self.lfo = Osc(self.t, (self.pit*self.tra) * self.veltrand, mul=self.cs[0])
-        self.a1 = Osc(self.snd, self.freq*self.tra, mul=self.amp*(self.lfo+1)).mix(1)
-        self.a2 = Osc(self.snd, (self.freq*.98)*self.tra, mul=self.amp*(self.lfo+1)).mix(1)
-
-        # Stereo mix.
+        self.lfo = Osc(self.t, (self.pit*self.tra), mul=self.cs[0], add=1)
+        self.a1 = Osc(self.snd, self.freq*self.tra, mul=self.amp*self.lfo).mix(1)
+        self.a2 = Osc(self.snd, (self.freq*.98)*self.tra, mul=self.amp*self.lfo).mix(1)
         self.mix = Mix([self.a1,self.a2])
-        self.look = Lookup(self.t, self.mix).mix(1)
+
+        # Waveshaped distortion
+        self.table = ExpTable([(0,-.25),(4096,0),(8192,0)], exp=30)
+        self.high_table = ExpTable([(0,1),(2000,1),(4096,0),(4598,0),(8192,0)],
+                            exp=5, inverse=False)
+        self.high_table.reverse()
+        self.table.add(self.high_table)
+        # self.table.view(title="Transfert function")
+        self.lookShape = Lookup(self.table, self.mix)
+        # self.dis = Disto(self.lookShape, drive=.5, slope=.95)
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -270,11 +271,11 @@ class WaveShape:
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 
-        self.interp = Interp(self.mix, self.look, self.veltrand)
-        self.damp = ButLP(self.look, freq=hfdamp).mix(1)
+        self.interp = Interp(self.mix, self.lookShape, cs[0])
+        self.damp = ButLP(self.lookShape, freq=hfdamp).mix(1)
         self.hp = ButHP(self.damp, 50).mix(1)
         self.comp = Compress(self.hp, thresh=-12, ratio=6, risetime=.01, falltime=.2, knee=0.5).mix(1)
-        self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.ampLfo, spread=.5, mul=mul)
+        self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.ampLfo, spread=.2, mul=mul)
 
     def out(self):
         self.p.out()
@@ -359,11 +360,12 @@ class ReSampler:
        
         self.tra = MToT(self.note['pitch']) * self.transpo
         self.pit = MToF(self.note['pitch']) * self.transpo
+        ### Toggle pour ignorer les notes ins
         self.amp = MidiAdsr(self.note['velocity'], attack=.01, decay=.1, sustain=.7, release=.2)
 
         self.valVel = SigTo(self.note['velocity'], .01)
         self.tabLenght = sampsToSec(48000)
-
+        ### Durée variable
         self.nt = NewTable(length=self.tabLenght, chnls=2, feedback=0)
         self.tr = TableRec(self.audioREC, table=self.nt, fadetime=.01).stop()
         self.trigLoop = TrigFunc(self.tr['trig'], self.playAftRec).stop()
