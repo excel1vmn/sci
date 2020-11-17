@@ -35,7 +35,7 @@ class Flux(PyoObject):
         in_fader,notein,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,freq,mul,add)
         self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
 
-        self._mod = Freeverb(in_fader, size=Pow(Clip(cs, 0, 1), 4), damp=self._amp, bal=1, mul=cs)
+        self._mod = Freeverb(in_fader, size=Pow(Clip(cs, .0, .995), 4), damp=self._amp, bal=1, mul=cs)
         self._comp = Compress(self._mod, thresh=-12, ratio=4, knee=.5)
         self._out = Sig(self._comp, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
