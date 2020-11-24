@@ -34,16 +34,17 @@ class Rebond(PyoObject):
         self._outs = outs
         self._in_fader = InputFader(input)
         in_fader,notein,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,base_interval,outs,mul,add)
+        self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
 
         self._check = Change(cs)
-        self._delay_seg = TrigLinseg(self._check, [(0,base_interval[0]),(3,base_interval[0] / 500)])
+        self._delay_seg = TrigLinseg(self._check+self._amp, [(0,base_interval[0]),(3,base_interval[0] / 500)])
         # Certain random dans le line segment
-        # Balayer un filtre en même temps 
+        # Balayer un filtre en même temps
         self._panner = FastSine(freq=.8*((self._delay_seg*20)+1), mul=.4, add=.5)
-        self._count = Counter(self._check, min=5, max=10, dir=2)
+        self._count = Counter(self._check, min=1, max=8, dir=2)
         # modulation du feedback
-        self._mod = SmoothDelay(in_fader, delay=self._delay_seg, feedback=self._count*.1, maxdelay=1, mul=cs)
-        self._filt = Reson(self._mod, freq=self._delay_seg*1000, q=1)
+        self._mod = SmoothDelay(in_fader, delay=self._delay_seg, feedback=self._count, maxdelay=1, mul=cs)
+        self._filt = Reson(self._mod, freq=MToF(notein['pitch']), q=self._count)
         self._comp = Compress(self._filt, thresh=-12, ratio=4, knee=.5)
         self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.3)
         self._out = Sig(self._pan, mul=mul, add=add)
