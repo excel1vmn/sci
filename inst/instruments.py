@@ -24,7 +24,7 @@ class Synth:
         self.panLfo = FastSine(self.sigRand, quality=0, mul=.5, add=.5)
         self.te = ExpTable([(0,0),(4096,1),(8192,0)], exp=3, inverse=True)
         self.logOsc = Osc(table=self.te, freq=15*(self.cs[1]+2))
-        self.fs = FastSine(freq=self.logOsc, mul=self.cs[1], add=1)
+        self.fs = FastSine(freq=self.logOsc, mul=self.cs[1], add=self.cs[1])
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -35,9 +35,8 @@ class Synth:
 
         self.osc1 = FastSine(self.sigRand, mul=self.cs[1])
         self.osc2 = FastSine(self.sigRand*.98, mul=self.cs[1])
-        self.cfm = CrossFM(carrier=self.pit, ratio=Mix([self.osc1,self.osc2]), ind1=self.cs[0]*50, ind2=Sig(self.cs[0])*self.fs, mul=self.amp)
+        self.cfm = CrossFM(carrier=self.pit, ratio=.5, ind1=self.cs[0]*50, ind2=Sig(self.cs[0])*self.fs, mul=self.amp)
 
-        # self.lfoAmp = FastSine(.1, quality=0, mul=800, add=800)
         self.lfo = Sine(lfofreq, phase=[random.random(),random.random()], mul=1, add=3000)
         self.damp = ButLP(self.cfm.mix(), freq=hfdamp).mix(1)
         self.notch = ButBR(self.damp, self.lfo).mix(1)
@@ -517,4 +516,3 @@ class ReSampler:
                 self.mids.pop(0)
                 self.mids.append(midiToTranspo(pitch))
         self.auto.setChoice(self.mids)
-        # print(self.auto.choice)

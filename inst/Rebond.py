@@ -36,15 +36,14 @@ class Rebond(PyoObject):
         in_fader,notein,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,base_interval,outs,mul,add)
         self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
 
+        self._pit = MToF(notein['pitch'])
         self._check = Change(cs)
-        self._on = Sig(cs) > .005
+        self._isON = Sig(cs) > .005
         self._vel = Sig(notein['velocity'])
         self._delay_seg = TrigLinseg(self._check+notein['trigon'], [(0,base_interval[0]),(8,base_interval[0] / 200)])
-        # Balayer un filtre en même temps
-        self._panner = FastSine(freq=(self._delay_seg*(cs[0]*100))+1, mul=.5, add=.5)
-        # modulation du feedback
-        self._filt = Reson(in_fader, freq=MToF(notein['pitch']), q=Pow(cs*100, 3)).mix()
-        self._mod = SmoothDelay(self._filt, delay=self._delay_seg*((self._vel*4)+1), feedback=.6, maxdelay=1, mul=self._on).mix()
+        self._panner = FastSine((self._delay_seg*(cs*20))+1, quality=0, mul=.5, add=.5)
+        self._filt = Reson(in_fader, freq=self._pit, q=5+(35*self._amp)).mix()
+        self._mod = SmoothDelay(self._filt, delay=self._delay_seg*((self._vel*4)+1), feedback=Clip(cs, min=.4, max=.7), maxdelay=1, mul=Port(self._isON, risetime=.1, falltime=.1)).mix()
         self._comp = Compress(self._mod, thresh=-12, ratio=4, knee=.5).mix()
         self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.2)
         self._out = Sig(self._pan, mul=mul, add=add)

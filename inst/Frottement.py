@@ -26,34 +26,32 @@ class Frottement(PyoObject):
         self._outs = outs
         self._in_fader = InputFader(input)
         in_fader,notein,cs,freq,outs,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,freq,outs,mul,add)
-        self._isON = Sig(cs) > .05
-        self._numINs = len(in_fader)
+        self._isON = Sig(cs) > .005
         self._check = Change(cs)
-        self._thresh = Thresh(cs, threshold=.5, dir=0)
-        self._trigenv = TrigLinseg(self._check, [(0,0),(.05,1.5),(1,.9),(2,.5),(5,0)])
-        self._rlfo = RandDur(min=freq, max=freq*10)
-        self._noise = Allpass2(Noise(self._trigenv), freq=200*(2000*self._trigenv), bw=200*(2000*self._trigenv), mul=.4, add=.5)
+        self._centro = Centroid(in_fader, size=1024)
+        self._port = Port(self._centro)
+        self._trigran = TrigRand(Mix([self._check,notein['trigon']]), min=.25, max=4)
+        self._trigenv = TrigLinseg(Mix([self._check,notein['trigon']]), [(0,0),(.05,1.5),(1,.9),(2,.5),(5,0)])
 
         # Waveshaped distortion
+        self._noise = Allpass2(Noise(in_fader), freq=(self._port*self._trigenv)+1, bw=100*(100*self._trigenv)).mix()
         self._table = ExpTable([(0,-.25),(4096,0),(8192,0)], exp=30)
-        self._high_table = ExpTable([(0,1),(2000,1),(4096,0),(4598,0),(8192,0)],
+        self._high_table = ExpTable([(0,1),(2000,1),(4096,0),(4598,-1),(8192,0)],
                             exp=5, inverse=False)
         self._high_table.reverse()
         self._table.add(self._high_table)
         self._lookShape = Lookup(self._table, in_fader)
-        self._dis = Disto(self._lookShape, drive=self._noise, slope=.55, mul=self._trigenv)
+        self._dis = Disto(self._lookShape, drive=Clip(self._noise, min=0, max=1), slope=.8, mul=self._trigenv).mix()
 
         # Multiband chain
         self._lfoFreq = []
         for i in range(len(freq)):
-            self._lfoFreq.append(freq[i]*self._rlfo[i])
-        self._lfo = FastSine(freq=self._lfoFreq*10, mul=.5*self._trigenv, add=.5)
-        self._mod = MultiBand(self._dis, num=len(freq), mul=self._lfo*cs)
-
-        ### AJOUTE UNE CHAINE DE TRAITEMENT EN GRANULATION ### 
+            self._lfoFreq.append((freq[i]*self._trigran)*Scale(cs, outmin=.005, outmax=8.0))
+        self._lfo = FastSine(self._lfoFreq, quality=0, mul=.5, add=.5)
+        self._mod = MultiBand(self._dis, num=len(freq), mul=self._lfo*Port(self._isON))
 
         # Output chain
-        self._comp = Compress(self._mod, thresh=-12, ratio=4, knee=.5)
+        self._comp = Compress(self._mod.mix(outs[0]), thresh=-12, ratio=4, knee=.5).mix()
         self._panner = FastSine(freq=freq*self._trigenv, mul=self._trigenv, add=.5)
         self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.5)
         self._out = Sig(self._pan, mul=mul, add=add)

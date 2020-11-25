@@ -1,10 +1,10 @@
 from pyo import *
 
 s = Server(sr=48000, nchnls=2, buffersize=1024, duplex=False)
-s.setInOutDevice(2)
+s.setInOutDevice(3)
 s.setMidiInputDevice(99)
 s.boot().start()
-s.amp = .2
+s.amp = 1
 
 i=0
 morse = [0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,1,0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,1,1]

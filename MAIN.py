@@ -11,8 +11,7 @@ from inst.Balancement import *
 from inst.Flexion import *
 from inst.PercussionResonance import *
 # from gridHandler import *
-import math
-import os, sys
+import math, os, sys
 # import threading
 # import keyboard
 
@@ -21,7 +20,7 @@ import os, sys
 ###############################################
 NAME = "MITÉ (Module d'interprétation de techniques d'écriture)"
 NUMOUTS = 2
-SOUND_CARD = 'INT'
+SOUND_CARD = 'EXT'
 
 # SERVER SETUP
 if NUMOUTS == 2:
@@ -71,8 +70,8 @@ for names in itemK:
 
 impulseR = "snds/BatteryBenson.wav"
 
-print(snds)
-print(drum_kit)
+# print(snds)
+# print(drum_kit)
 
 ###############################################
 ############### MIDI PARAMETERS ###############
@@ -116,13 +115,13 @@ SIGSNB = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
 #--- NAKED BOARDS ---#
 
 transpo = Bendin(brange=2, scale=1, channel=1)
-# High frequency damping mapped to controller number 1.
 hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=18000, init=18000, channel=3)
 lfdamp = Midictl(ctlnumber=48, minscale=20, maxscale=18000, init=20, channel=3)
 # Frequency of the LFO applied to the speed of the moving notches.
 # lfofreq = Midictl(ctlnumber=13, minscale=0.1, maxscale=20, init=0.2, channel=6)
-# Toggles certain parameters of ReSampler class instruments 
+
 #--- LAUNCHPAD MINI ---#
+# Toggles certain parameters of ReSampler class instruments 
 trigs = Midictl(ctlnumber=[0,1,2,3,4,5,6,7], channel=3)
 toggles1 = Midictl(ctlnumber=[ 8,16,24], channel=3)
 toggles2 = Midictl(ctlnumber=[ 9,17,25], channel=3)
@@ -182,10 +181,10 @@ te_fader = Sig([1,1,1,1,1,1,1,1])
 ###############################################
 ############ TECHNIQUE D'ÉCRITURE #############
 ###############################################
-fr = Frottement(Mix(prefx), n0, SIGSNB[16], freq=[3,1.15,.5,.7,2.5,6,.04], outs=NUMOUTS, mul=te_fader[0])
+fr = Frottement(Mix(prefx), n0, SIGSNB[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS, mul=te_fader[0])
 ### FIX : corriger le fonctionnement du traitement dans instruments
-ac = Accumulation(Mix(prefx), n0, SIGSNB[17], delay=.005, outs=NUMOUTS, mul=te_fader[1])
-### BUG : Rebond cause lag général
+ac = Accumulation(Mix(prefx), n0, SIGSNB[17], delay=.025, outs=NUMOUTS, mul=te_fader[1])
+### BUG : Rebond cause lag général (presque règlé)
 re = Rebond(Mix(prefx), n0, SIGSNB[18], base_interval=.21, outs=NUMOUTS, mul=te_fader[2])
 oc = Oscillation(Mix(prefx), n0, SIGSNB[19], freq=50, outs=NUMOUTS, mul=te_fader[3])
 fl = Flux(Mix(prefx), n0, SIGSNB[20], freq=50, outs=NUMOUTS, mul=te_fader[4])
