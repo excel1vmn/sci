@@ -21,7 +21,7 @@ import os, sys
 ###############################################
 NAME = "MITÉ (Module d'interprétation de techniques d'écriture)"
 NUMOUTS = 2
-SOUND_CARD = 'EXT'
+SOUND_CARD = 'INT'
 
 # SERVER SETUP
 if NUMOUTS == 2:
@@ -30,7 +30,7 @@ if NUMOUTS == 2:
         s.setInOutDevice(0)
         print('EXT')
     else:
-        s = Server(sr=44100, buffersize=512, nchnls=NUMOUTS, duplex=0, audio='pa')
+        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
         s.setOutputDevice(3)
         print('INT')
 else:
@@ -138,11 +138,12 @@ toggles_row2 = Midictl(ctlnumber=[40,41,42,43,44,45,46,47], channel=3)
 
 n1 = Notein(poly=10, scale=0, first=0, last=127, channel=1)
 n2 = Notein(poly=10, scale=0, first=0, last=127, channel=2)
-n3 = Notein(poly=10, scale=0, first=0, last=127, channel=3)
-n4 = Notein(poly=10, scale=0, first=0, last=127, channel=4)
-n10 = Notein(poly=24, scale=0, first=0, last=127, channel=10)
+# n3 = Notein(poly=10, scale=0, first=0, last=127, channel=3)
+# n4 = Notein(poly=10, scale=0, first=0, last=127, channel=4)
+n10 = Notein(poly=10, scale=0, first=0, last=127, channel=10)
 ### Sert à manipuler les gestes musicaux / techniques d'écriture ### 
 n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
+
 ###############################################
 ############### MIDI PARAMETERS ###############
 ###############################################
@@ -165,10 +166,10 @@ a3 = Simpler(n2, snds, trigs[2], toggles3, [SIGSNB[2],SIGSNB[10]], transpo, hfda
 a4 = WaveShape(n2, snds[5], trigs[3], toggles4, [SIGSNB[3],SIGSNB[11]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[3])
 
 ### ADD : 1 autre bouton de changement de style de jeu!!
-r1 = ReSampler(n3, Mix(pre_output, NUMOUTS), trigs[4], toggles5, [SIGSNB[4],SIGSNB[12]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[4])
-r2 = ReSampler(n3, Mix(pre_output, NUMOUTS), trigs[5], toggles6, [SIGSNB[5],SIGSNB[13]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[5])
-r3 = ReSampler(n3, Mix(pre_output, NUMOUTS), trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[6])
-r4 = ReSampler(n3, Mix(pre_output, NUMOUTS), trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[7])
+r1 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[4], toggles5, [SIGSNB[4],SIGSNB[12]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[4])
+r2 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[5], toggles6, [SIGSNB[5],SIGSNB[13]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[5])
+r3 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[6])
+r4 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[7])
 
 prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig()], mul=toggles_row2)
 ###############################################
@@ -184,10 +185,9 @@ te_fader = Sig([1,1,1,1,1,1,1,1])
 fr = Frottement(Mix(prefx), n0, SIGSNB[16], freq=[3,1.15,.5,.7,2.5,6,.04], outs=NUMOUTS, mul=te_fader[0])
 ### FIX : corriger le fonctionnement du traitement dans instruments
 ac = Accumulation(Mix(prefx), n0, SIGSNB[17], delay=.005, outs=NUMOUTS, mul=te_fader[1])
-### ADD : ajout d'effet stylistique sur rebond
-re = Rebond(Mix(prefx), n0, SIGSNB[18], base_interval=.3, outs=NUMOUTS, mul=te_fader[2])
+### BUG : Rebond cause lag général
+re = Rebond(Mix(prefx), n0, SIGSNB[18], base_interval=.21, outs=NUMOUTS, mul=te_fader[2])
 oc = Oscillation(Mix(prefx), n0, SIGSNB[19], freq=50, outs=NUMOUTS, mul=te_fader[3])
-### BUG : si au max, launchcontrol peu se déconnecter
 fl = Flux(Mix(prefx), n0, SIGSNB[20], freq=50, outs=NUMOUTS, mul=te_fader[4])
 ba = Balancement(Mix(prefx), n0, SIGSNB[21], freq=50, outs=NUMOUTS, mul=te_fader[5])
 fe = Flexion(Mix(prefx), n0, SIGSNB[22], freq=50, outs=NUMOUTS, mul=te_fader[6])
