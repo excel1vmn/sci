@@ -35,6 +35,7 @@ class PercussionResonance(PyoObject):
         self._in_fader = InputFader(input)
         in_fader,notein,cs,ir,freq,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,ir,freq,mul,add)
         self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=5)
+        self._thresh = Thresh(in_fader, threshold=0.)
         self._penv = TrigLinseg(notein['trigon'], [(0,0),(.005,8),(.1,2),(.5,0)])
         self._del = CvlVerb(in_fader, ir, .4, size=1024, mul=self._amp)
         self._reso = Resonx(self._del, freq=MToF(notein['pitch']), q=notein['velocity']*50, stages=4, mul=(self._amp*10))

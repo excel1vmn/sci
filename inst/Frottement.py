@@ -41,7 +41,7 @@ class Frottement(PyoObject):
         self._high_table.reverse()
         self._table.add(self._high_table)
         self._lookShape = Lookup(self._table, in_fader)
-        self._dis = Disto(self._lookShape, drive=Clip(self._noise, min=0, max=1), slope=.8, mul=self._trigenv).mix()
+        self._dis = Disto(self._lookShape, drive=Clip(self._noise, 0, 1), slope=.8, mul=self._trigenv).mix()
 
         # Multiband chain
         self._lfoFreq = []

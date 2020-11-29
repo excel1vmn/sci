@@ -25,7 +25,7 @@ SOUND_CARD = 'EXT'
 # SERVER SETUP
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=44100, buffersize=512, nchnls=NUMOUTS, duplex=0, audio='pa')
+        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='pa')
         s.setInOutDevice(0)
         print('EXT')
     else:
@@ -33,8 +33,9 @@ if NUMOUTS == 2:
         s.setOutputDevice(3)
         print('INT')
 else:
-    s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
-    s.setInOutDevice(0)
+    s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='jack')
+    s.setJackAuto()
+    s.setInOutDevice(1)
     print('JACK')
 
 # LINUX AUDIO/MIDI CONFIG
@@ -76,10 +77,10 @@ impulseR = "snds/BatteryBenson.wav"
 ###############################################
 ############### MIDI PARAMETERS ###############
 ###############################################
-def ctl_scan(ctlnum, midichnl):
-    print(ctlnum, midichnl)
+# def ctl_scan(ctlnum, midichnl):
+    # print(ctlnum, midichnl)
     # print(HP.boost.get())
-ctlscan = CtlScan2(ctl_scan, False)
+# ctlscan = CtlScan2(ctl_scan, False)
 
 def event(status, data1, data2):
     # print(status, data1, data2)
@@ -92,7 +93,7 @@ raw = RawMidi(event)
 
 #--- LAUNCH CONTROL XL ---#
 MULPOW = Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 5)
-SIGSNB = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
+CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                             29,30,31,32,33,34,35,36,
                             49,50,51,52,53,54,55,56],
                       init=[ 0, 0, 0, 0, 0, 0, 0, 0,
@@ -106,7 +107,7 @@ SIGSNB = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
 
 #--- NAKED BOARDS ---#
 # MULPOW = Pow(Midictl(ctlnumber=[0,1,2,3,4,5,6,7], init=0, channel=1), 5)
-# SIGSNB = Midictl(ctlnumber=[ 8, 9,10,11,12,13,14,15,
+# CS = Midictl(ctlnumber=[ 8, 9,10,11,12,13,14,15,
 #                             16,17,18,19,20,21,22,23,
 #                             24,25,26,27,28,29,30,31], 
 #                       init=[ 0, 0, 0, 0, 0, 0, 0 ,0,
@@ -142,7 +143,6 @@ n2 = Notein(poly=10, scale=0, first=0, last=127, channel=2)
 n10 = Notein(poly=10, scale=0, first=0, last=127, channel=10)
 ### Sert à manipuler les gestes musicaux / techniques d'écriture ### 
 n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
-
 ###############################################
 ############### MIDI PARAMETERS ###############
 ###############################################
@@ -157,56 +157,55 @@ pre_output = Mixer(outs=NUMOUTS, chnls=1)
 ###############################################
 ################# INSTRUMENTS #################
 ###############################################
-drums = Drums(n10, drum_kit, cs=toggles_row1, transpo=transpo)
+dn = Noise(1e-24) # low-level noise for denormals
 
-a1 = Synth(n2, trigs[0], toggles1, [SIGSNB[0],SIGSNB[8]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[0])
-a2 = FreakSynth(n2, trigs[1], toggles2, [SIGSNB[1],SIGSNB[9]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[1])
-a3 = Simpler(n2, snds, trigs[2], toggles3, [SIGSNB[2],SIGSNB[10]], transpo, hfdamp=hfdamp, autoswitch=False, withloop=False, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[2])
-a4 = WaveShape(n2, snds[5], trigs[3], toggles4, [SIGSNB[3],SIGSNB[11]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[3])
+drums = Drums(n10, drum_kit, toggles_row1, dn, transpo=transpo)
+
+a1 = Synth(n2, trigs[0], toggles1, [CS[0],CS[8]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[0])
+a2 = FreakSynth(n2, trigs[1], toggles2, [CS[1],CS[9]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[1])
+a3 = Simpler(n2, snds, trigs[2], toggles3, [CS[2],CS[10]], dn, transpo, hfdamp=hfdamp, autoswitch=False, withloop=False, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[2])
+a4 = WaveShape(n2, snds[10], trigs[3], toggles4, [CS[3],CS[11]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[3])
 
 ### ADD : 1 autre bouton de changement de style de jeu!!
-r1 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[4], toggles5, [SIGSNB[4],SIGSNB[12]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[4])
-r2 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[5], toggles6, [SIGSNB[5],SIGSNB[13]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[5])
-r3 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[6], toggles7, [SIGSNB[6],SIGSNB[14]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[6])
-r4 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[7], toggles8, [SIGSNB[7],SIGSNB[15]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[7])
+r1 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[4], toggles5, [CS[4],CS[12]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[4])
+r2 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[5], toggles6, [CS[5],CS[13]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[5])
+r3 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[6], toggles7, [CS[6],CS[14]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[6])
+r4 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[7], toggles8, [CS[7],CS[15]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[7])
 
 prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig()], mul=toggles_row2)
 ###############################################
 ################# INSTRUMENTS #################
 ###############################################
 
-te_fader = Sig([1,1,1,1,1,1,1,1])
-# fader.ctrl()
-
 ###############################################
 ############ TECHNIQUE D'ÉCRITURE #############
 ###############################################
-fr = Frottement(Mix(prefx), n0, SIGSNB[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS, mul=te_fader[0])
+fr = Frottement(Mix(prefx), n0, CS[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS)
 ### FIX : corriger le fonctionnement du traitement dans instruments
-ac = Accumulation(Mix(prefx), n0, SIGSNB[17], delay=.025, outs=NUMOUTS, mul=te_fader[1])
+ac = Accumulation(Mix(prefx), n0, CS[17], delay=.025, outs=NUMOUTS)
 ### BUG : Rebond cause lag général (presque règlé)
-re = Rebond(Mix(prefx), n0, SIGSNB[18], base_interval=.21, outs=NUMOUTS, mul=te_fader[2])
-oc = Oscillation(Mix(prefx), n0, SIGSNB[19], freq=50, outs=NUMOUTS, mul=te_fader[3])
-fl = Flux(Mix(prefx), n0, SIGSNB[20], freq=50, outs=NUMOUTS, mul=te_fader[4])
-ba = Balancement(Mix(prefx), n0, SIGSNB[21], freq=50, outs=NUMOUTS, mul=te_fader[5])
-fe = Flexion(Mix(prefx), n0, SIGSNB[22], freq=50, outs=NUMOUTS, mul=te_fader[6])
+re = Rebond(Mix(prefx), n0, CS[18], base_interval=.21, outs=NUMOUTS)
+oc = Oscillation(Mix(prefx), n0, CS[19], freq=50, outs=NUMOUTS)
+fl = Flux(Mix(prefx), n0, CS[20], freq=50, outs=NUMOUTS)
+ba = Balancement(Mix(prefx), n0, CS[21], freq=50, outs=NUMOUTS)
+fe = Flexion(Mix(prefx), n0, CS[22], freq=50, outs=NUMOUTS)
 ### Plus d'accent sur l'attaque et moins en tout temps
-pr = PercussionResonance(Mix(prefx), n0, SIGSNB[23], ir=impulseR, freq=100, outs=NUMOUTS, mul=te_fader[7])
+pr = PercussionResonance(Mix(prefx), n0, CS[23], ir=impulseR, freq=100, outs=NUMOUTS)
 ###############################################
 ############ TECHNIQUE D'ÉCRITURE #############
 ###############################################
 
 ### SIDE CHAIN ###
-inputFollow = Follower(Mix([fr,ac,re,oc,fl,ba,fe,pr], NUMOUTS, mul=toggles_row2), freq=20)
-talk = inputFollow > .05
-followAmp = Port(talk, risetime=.005, falltime=.001)
-ampscl = Scale([followAmp,followAmp], outmin=1, outmax=.05)
+# inputFollow = Follower(Mix([fr,ac,re,oc,fl,ba,fe,pr], NUMOUTS, mul=toggles_row2))
+# talk = inputFollow > .1
+# followAmp = Port(talk, risetime=.005, falltime=.001)
+# ampscl = Scale([followAmp,followAmp], outmin=1, outmax=.1)
 ### SIDE CHAIN ###
 
 ###############################################
 ################ SIGNAL PATH ##################
 ###############################################
-clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUMOUTS), thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5, mul=ampscl)
+clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUMOUTS), thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5)
 
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
@@ -214,12 +213,12 @@ HP = EQ(Mix([fr,ac,re,oc,fl,ba,fe,pr,clean_sig],NUMOUTS), freq=lfdamp, q=.5, boo
 LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.2, boost=-40, type=2)
 HP.ctrl()
 LP.ctrl()
-COMP = Compress(LP, thresh=-10, ratio=4, knee=.5)
+COMP = Compress(LP, thresh=-12, ratio=4, knee=.5)
 downmix = Mix(COMP, voices=NUMOUTS, mul=.3).out()
 pre_output.addInput(0, downmix)
 pre_output.setAmp(0, 0, 1)
 pre_output.setAmp(0, 1, 1)
-spectrum = Spectrum(downmix)
+# spectrum = Spectrum(downmix)
 ###############################################
 ################ SIGNAL PATH ##################
 ###############################################
