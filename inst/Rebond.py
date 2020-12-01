@@ -28,24 +28,20 @@ class Rebond(PyoObject):
     def __init__(self, input, notein, cs, base_interval=.5, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._notein = notein
         self._cs = cs
         self._base_interval = base_interval
         self._outs = outs
         self._in_fader = InputFader(input)
-        in_fader,notein,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,base_interval,outs,mul,add)
+        in_fader,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,base_interval,outs,mul,add)
         self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
-
         self._pit = MToF(notein['pitch'])
         self._check = Change(cs)
         self._isON = Sig(cs) > .005
-        self._vel = Sig(notein['velocity'])
         self._delay_seg = TrigLinseg(self._check+notein['trigon'], [(0,base_interval[0]),(8,base_interval[0] / 200)])
         self._panner = FastSine((self._delay_seg*(cs*20))+1, quality=0, mul=.5, add=.5)
-        self._filt = Reson(in_fader, freq=self._pit, q=5+(35*self._amp)).mix()
-        self._mod = SmoothDelay(self._filt, delay=self._delay_seg*((self._vel*4)+1), feedback=Clip(cs, min=.4, max=.7), maxdelay=1, mul=Port(self._isON, risetime=.1, falltime=.1)).mix()
-        self._comp = Compress(self._mod, thresh=-12, ratio=4, knee=.5).mix()
-        self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.2)
+        self._filt = Reson(in_fader, freq=self._pit, q=5+(15*self._amp)).mix()
+        self._mod = SmoothDelay(self._filt, delay=self._delay_seg*((self._amp*4)+1), feedback=Clip(cs, min=.2, max=.5), maxdelay=1, mul=Port(self._isON)).mix()
+        self._pan = Pan(self._mod, outs=outs[0], pan=self._panner, spread=.2)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

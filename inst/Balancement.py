@@ -28,18 +28,17 @@ class Balancement(PyoObject):
     def __init__(self, input, notein, cs, freq=500, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._notein = notein
         self._cs = cs
         self._freq = freq
         self._in_fader = InputFader(input)
-        in_fader,notein,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,freq,mul,add)
+        in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
         self._check = Change(cs)
         self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
 
         # ça mais pour un chagement de pitch 50 -> 500 graduel...
-        self._mod1 = FastSine(freq=.01, mul=notein['pitch'], add=notein['pitch'])
-        self._mod2 = FastSine(freq=.3*self._mod1, mul=.5, add=.5)
-        self._mod3 = FastSine(freq=.07, mul=cs)
+        self._mod1 = FastSine(freq=.01, quality=0, mul=notein['pitch'], add=notein['pitch'])
+        self._mod2 = FastSine(freq=.3*self._mod1, quality=0, mul=.5, add=.5)
+        self._mod3 = FastSine(freq=.07, quality=0, mul=cs)
         # self._pitchLin = TrigLinseg(notein['trigon'], [(0,0),(2,10),(4,1),(6,12),(8,0)])
         self._trigL = TrigLinseg(notein['trigon'], [(0,0),(2,100),(4,10),(6,120),(8,0)]) 
         self._trigR = TrigLinseg(notein['trigon'], [(0,0),(2,10),(4,100),(6,12),(8,0)])

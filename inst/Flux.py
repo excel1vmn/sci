@@ -28,11 +28,10 @@ class Flux(PyoObject):
     def __init__(self, input, notein, cs, freq=500, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._notein = notein
         self._cs = cs
         self._freq = freq
         self._in_fader = InputFader(input)
-        in_fader,notein,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,freq,mul,add)
+        in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
         self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
 
         self._harm = Harmonizer(in_fader, transpo=[-5.0, 5.0], feedback=.3, winsize=.1)

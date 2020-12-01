@@ -20,29 +20,27 @@ class Accumulation(PyoObject):
     def __init__(self, input, notein, cs, delay=1, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._notein = notein
         self._cs = Sig(cs)
         self._delay = delay
         self._outs = outs
         self._in_fader = InputFader(input)
-        in_fader,notein,cs,delay,outs,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,delay,outs,mul,add)
+        in_fader,cs,delay,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,delay,outs,mul,add)
 
         self._isON = Sig(cs) > .005
         self._onesample = 1.0 / 48000
-        self._rand = SigTo(RandDur(min=[self._delay,self._delay*1.04],max=[self._delay*10,self._delay*15]))
-        self._del1 = Delay(in_fader, [delay[0]*1.02,delay[0]*2.1], feedback=[.41,.37])
-        self._del2 = Delay(in_fader, [delay[0]*.98,delay[0]*1.8], feedback=[.39,.43])
+        self._rand = SigTo(RandDur(min=[delay[0],delay[0]*1.04],max=[delay[0]*4,delay[0]*6]))
+        self._del1 = Delay(in_fader, delay[0]*1.02*cs[0], feedback=[.41,.37,.33,.45]).mix()
+        self._del2 = Delay(in_fader, delay[0]*0.98*cs[0], feedback=[.39,.43,.47,.31]).mix()
         self._mod = Sig([self._del1,self._del2])
-        self._panner = FastSine(freq=1*(cs[0]*10), mul=.5, add=.5)
+        self._panner = FastSine(freq=SigTo(1*(cs[0]*4)), quality=0, mul=.4, add=.5)
         self._passes = []
-        for i in range(2):
+        for i in range(4):
             if i%2 == 0:
-                self._passes.append(Allpass(self._mod[0], delay=self._rand/(cs*100)))
+                self._passes.append(Allpass(self._mod[0], delay=Port((cs[0])*self._rand[0], risetime=.005, falltime=.005)).mix())
             else:
-                self._passes.append(Allpass(self._mod[1], delay=self._rand/(cs*100)))
-        self._passesM = Mix(self._passes, outs[0], mul=Port(self._isON))
-        self._comp = Compress(Mix(self._passesM, outs[0]), thresh=-12, ratio=4, knee=.5)
-        self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.2)
+                self._passes.append(Allpass(self._mod[1], delay=Port((cs[0])*self._rand[1], risetime=.005, falltime=.005)).mix())
+        self._passesM = Mix(self._passes, outs[0], mul=Port(self._isON)).mix()
+        self._pan = Pan(self._passesM, outs=outs[0], pan=self._panner, spread=.3)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

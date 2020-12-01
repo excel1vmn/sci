@@ -20,12 +20,11 @@ class Frottement(PyoObject):
     def __init__(self, input, notein, cs, freq=100, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._notein = notein
         self._cs = cs
         self._freq = freq
         self._outs = outs
         self._in_fader = InputFader(input)
-        in_fader,notein,cs,freq,outs,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,freq,outs,mul,add)
+        in_fader,cs,freq,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,outs,mul,add)
         self._isON = Sig(cs) > .005
         self._check = Change(cs)
         self._centro = Centroid(in_fader, size=1024)
@@ -48,12 +47,11 @@ class Frottement(PyoObject):
         for i in range(len(freq)):
             self._lfoFreq.append((freq[i]*self._trigran)*Scale(cs, outmin=.005, outmax=8.0))
         self._lfo = FastSine(self._lfoFreq, quality=0, mul=.5, add=.5)
-        self._mod = MultiBand(self._dis, num=len(freq), mul=self._lfo*Port(self._isON))
+        self._mod = MultiBand(self._dis, num=len(freq), mul=Port(self._lfo*self._isON)).mix()
 
         # Output chain
-        self._comp = Compress(self._mod.mix(outs[0]), thresh=-12, ratio=4, knee=.5).mix()
-        self._panner = FastSine(freq=freq*self._trigenv, mul=self._trigenv, add=.5)
-        self._pan = Pan(self._comp, outs=outs[0], pan=self._panner, spread=.5)
+        self._panner = FastSine(freq=freq*self._trigenv, quality=0, mul=self._trigenv, add=.5)
+        self._pan = Pan(self._mod, outs=outs[0], pan=self._panner, spread=.5)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

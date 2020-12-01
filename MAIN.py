@@ -20,12 +20,12 @@ import math, os, sys
 ###############################################
 NAME = "MITÉ (Module d'interprétation de techniques d'écriture)"
 NUMOUTS = 2
-SOUND_CARD = 'EXT'
+SOUND_CARD = 'INT'
 
 # SERVER SETUP
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='pa')
+        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
         s.setInOutDevice(0)
         print('EXT')
     else:
@@ -94,11 +94,11 @@ raw = RawMidi(event)
 #--- LAUNCH CONTROL XL ---#
 MULPOW = Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 5)
 CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
-                            29,30,31,32,33,34,35,36,
-                            49,50,51,52,53,54,55,56],
-                      init=[ 0, 0, 0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0, 0, 0], channel=6)
+                        29,30,31,32,33,34,35,36,
+                        49,50,51,52,53,54,55,56],
+                  init=[ 0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0, 0], channel=6)
 # SIGTRIG = Midictl(ctlnumber=[41,42,43,44,57,58,59,60,
 #                              73,74,75,76,89,90,91,92],
 #                       init=[ 0, 0, 0, 0, 0, 0, 0, 0,
@@ -180,20 +180,21 @@ prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.s
 ###############################################
 ############ TECHNIQUE D'ÉCRITURE #############
 ###############################################
-fr = Frottement(Mix(prefx), n0, CS[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS)
-### FIX : corriger le fonctionnement du traitement dans instruments
-ac = Accumulation(Mix(prefx), n0, CS[17], delay=.025, outs=NUMOUTS)
-### BUG : Rebond cause lag général (presque règlé)
-re = Rebond(Mix(prefx), n0, CS[18], base_interval=.21, outs=NUMOUTS)
-oc = Oscillation(Mix(prefx), n0, CS[19], freq=50, outs=NUMOUTS)
-fl = Flux(Mix(prefx), n0, CS[20], freq=50, outs=NUMOUTS)
-ba = Balancement(Mix(prefx), n0, CS[21], freq=50, outs=NUMOUTS)
-fe = Flexion(Mix(prefx), n0, CS[22], freq=50, outs=NUMOUTS)
+fr = Frottement(Mix(prefx+dn), n0, CS[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS)
+ac = Accumulation(Mix(prefx+dn), n0, CS[17], delay=.025, outs=NUMOUTS)
+re = Rebond(Mix(prefx+dn), n0, CS[18], base_interval=.21, outs=NUMOUTS)
+oc = Oscillation(Mix(prefx+dn), n0, CS[19], freq=50, outs=NUMOUTS)
+fl = Flux(Mix(prefx+dn), n0, CS[20], freq=50, outs=NUMOUTS)
+ba = Balancement(Mix(prefx+dn), n0, CS[21], freq=50, outs=NUMOUTS)
+fe = Flexion(Mix(prefx+dn), n0, CS[22], freq=50, outs=NUMOUTS)
 ### Plus d'accent sur l'attaque et moins en tout temps
-pr = PercussionResonance(Mix(prefx), n0, CS[23], ir=impulseR, freq=100, outs=NUMOUTS)
+pr = PercussionResonance(Mix(prefx+dn), n0, CS[23], ir=impulseR, freq=100, outs=NUMOUTS)
 ###############################################
 ############ TECHNIQUE D'ÉCRITURE #############
 ###############################################
+
+# isUsedCheck = Select(MULPOW, .05)
+# trigInsts = TrigFunc(isUsedCheck, playInst)
 
 ### SIDE CHAIN ###
 # inputFollow = Follower(Mix([fr,ac,re,oc,fl,ba,fe,pr], NUMOUTS, mul=toggles_row2))

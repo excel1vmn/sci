@@ -28,12 +28,11 @@ class PercussionResonance(PyoObject):
     def __init__(self, input, notein, cs, ir, freq=500, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
-        self._notein = notein
         self._cs = cs
         self._ir = ir
         self._freq = freq
         self._in_fader = InputFader(input)
-        in_fader,notein,cs,ir,freq,mul,add,lmax = convertArgsToLists(self._in_fader,notein,cs,ir,freq,mul,add)
+        in_fader,cs,ir,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,ir,freq,mul,add)
         self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=5)
         self._thresh = Thresh(in_fader, threshold=0.)
         self._penv = TrigLinseg(notein['trigon'], [(0,0),(.005,8),(.1,2),(.5,0)])
