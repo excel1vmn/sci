@@ -32,20 +32,17 @@ class Balancement(PyoObject):
         self._freq = freq
         self._in_fader = InputFader(input)
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
+        self._isON = Sig(cs) > .005
         self._check = Change(cs)
-        self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
-
         # ça mais pour un chagement de pitch 50 -> 500 graduel...
-        self._mod1 = FastSine(freq=.01, quality=0, mul=notein['pitch'], add=notein['pitch'])
-        self._mod2 = FastSine(freq=.3*self._mod1, quality=0, mul=.5, add=.5)
-        self._mod3 = FastSine(freq=.07, quality=0, mul=cs)
-        # self._pitchLin = TrigLinseg(notein['trigon'], [(0,0),(2,10),(4,1),(6,12),(8,0)])
+        self._fs1 = FastSine(freq=.01, quality=0, mul=notein['pitch'], add=notein['pitch'])
+        self._fs2 = FastSine(freq=.3*self._fs1, quality=0, mul=.5, add=.5)
+        self._fs3 = FastSine(freq=.07, quality=0, mul=cs)
         self._trigL = TrigLinseg(notein['trigon'], [(0,0),(2,100),(4,10),(6,120),(8,0)]) 
         self._trigR = TrigLinseg(notein['trigon'], [(0,0),(2,10),(4,100),(6,12),(8,0)])
-        self._freqShift = FreqShift(in_fader, shift=[self._trigL,self._trigR], mul=cs)
-        self._comp = Compress(self._freqShift, thresh=-12, ratio=4, knee=.5)
-        self._mod = Pan(self._comp, outs=outs, pan=self._mod2*self._mod3, spread=[.3,.3])
-        self._out = Sig(self._mod, mul=mul, add=add)
+        self._mod = FreqShift(in_fader, [self._trigL,self._trigR], mul=Port(self._isON)).mix()
+        self._pan = Pan(self._mod, outs=outs, pan=self._fs2*self._fs3, spread=[.2,.2])
+        self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):

@@ -25,24 +25,23 @@ class PercussionResonance(PyoObject):
     >>> pot = PercussionResonance(src, freq=[800,1000], mul=lfo).out()
 
     """
-    def __init__(self, input, notein, cs, ir, freq=500, outs=2, mul=1, add=0):
+    def __init__(self, input, notein, cs, freq=500, outs=2, mul=1, add=0):
         PyoObject.__init__(self, mul, add)
         self._input = input
         self._cs = cs
-        self._ir = ir
         self._freq = freq
         self._in_fader = InputFader(input)
-        in_fader,cs,ir,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,ir,freq,mul,add)
-        self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=5)
+        in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
+        self._isON = Sig(cs) > .005
+        self._amp = MidiAdsr(notein['velocity'], release=5)
         self._thresh = Thresh(in_fader, threshold=0.)
         self._penv = TrigLinseg(notein['trigon'], [(0,0),(.005,8),(.1,2),(.5,0)])
-        self._del = CvlVerb(in_fader, ir, .4, size=1024, mul=self._amp)
-        self._reso = Resonx(self._del, freq=MToF(notein['pitch']), q=notein['velocity']*50, stages=4, mul=(self._amp*10))
+        self._reso = Resonx(in_fader, freq=MToF(notein['pitch']), q=self._amp*50, stages=4, mul=self._amp*10)
         self._eq = EQ(self._reso, freq=MToF(notein['pitch']), q=(self._amp+1)*49, boost=self._amp*24, type=1)
-        self._harm = Harmonizer(self._eq, transpo=10*self._penv, feedback=self._penv*.05, winsize=.1, mul=(self._amp*2)*cs)
-        self._comp = Compress(self._harm, thresh=-10, ratio=4, knee=.5)
-        self._mod = Pan(self._comp, outs=outs, pan=.5, spread=.3)
-        self._out = Sig(self._mod, mul=mul, add=add)
+        self._comp = Compress(self._eq)
+        self._mod = Harmonizer(self._comp, transpo=10*self._penv, feedback=self._penv*.05, winsize=.1, mul=Port(self._isON))
+        self._pan = Pan(self._mod, outs=outs, pan=.5, spread=.3)
+        self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):

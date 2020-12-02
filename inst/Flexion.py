@@ -32,20 +32,14 @@ class Flexion(PyoObject):
         self._freq = freq
         self._in_fader = InputFader(input)
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
-        self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
-        self._env = [(0,0), (.1,.5), (.4,.4), (.8,.3), (1.5,1), (2,0)]
-        self._midEnv1 = MidiLinseg(notein['velocity'], self._env, hold=4)
-
-        self._check = Change(cs)
-        self._trigenv = TrigLinseg(self._check, [(0,.1),(.05,1),(1,.7),(2,.5),(5,.1)])
-        
-        self._modulator = Sine(freq=10*self._midEnv1+1, mul=in_fader)
-        self._panMod = Sine(freq=5*self._midEnv1+1, mul=.5, add=.5)
-        self._pitchMod = Sine(freq=8*self._midEnv1+2, mul=self._midEnv1, add=-5)
-        self._harmonizer = Harmonizer(self._modulator, transpo=(self._pitchMod*self._midEnv1)*-1, feedback=self._trigenv, winsize=0.05, mul=cs)
-        self._comp = Compress(self._harmonizer, thresh=-12, ratio=4, knee=.5)
-        self._mod = Pan(self._comp, outs=outs, pan=self._panMod, spread=.3)
-        self._out = Sig(self._mod, mul=mul, add=add)
+        self._isON = Sig(cs) > .005
+        self._amp = MidiAdsr(notein['velocity'])
+        self._modulator = Sine(Clip(cs,1,10), mul=in_fader)
+        self._panMod = Sine((in_fader*self._amp)+1, mul=.5, add=.5)
+        self._pitchMod = Sine(8*Clip(cs,1,10), mul=Clip(cs, -100.0, 100.0))
+        self._mod = Harmonizer(self._modulator, transpo=self._pitchMod*self._amp, feedback=self._amp, mul=Port(self._isON))
+        self._pan = Pan(self._mod, outs=outs, pan=self._panMod, spread=.3)
+        self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):

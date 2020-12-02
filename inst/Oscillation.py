@@ -32,16 +32,13 @@ class Oscillation(PyoObject):
         self._freq = freq
         self._in_fader = InputFader(input)
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
-
+        self._isON = Sig(cs) > .005
         self._check = Change(notein['trigon'])
-        self._trig = TrigLinseg(self._check, [(0,1),(.05,10),(1,1)])
-        self._shifter1 = Phasor(freq=2.2*self._trig, phase=1, mul=freq, add=freq)
-        self._shifter2 = Phasor(freq=2.8*self._trig, phase=0, mul=freq, add=freq)
-        self._shift1 = FreqShift(in_fader, shift=self._shifter1, mul=cs)
-        self._shift2 = FreqShift(in_fader, shift=self._shifter2, mul=cs)
-        self._comp = Compress(Mix([self._shift1,self._shift2], outs), thresh=-12, ratio=4, knee=.5)
-        self._mod = Pan(self._comp, outs=outs, pan=[.15,.85], spread=[.2,.2])
-        self._out = Sig(self._mod, mul=mul, add=add)
+        self._trig = TrigLinseg(self._check, [(0,1),(.05,10),(1,1)], mul=cs).mix()
+        self._shifter = Phasor([2.2,2.8], mul=freq*self._trig, add=freq*self._trig).mix()
+        self._mod = FreqShift(in_fader, shift=self._shifter, mul=Port(self._isON)).mix()
+        self._pan = Pan(self._mod, outs=outs, pan=[.1,.9], spread=[.1,.1])
+        self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
     def setInput(self, x, fadetime=0.05):

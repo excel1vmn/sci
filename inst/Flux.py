@@ -32,12 +32,11 @@ class Flux(PyoObject):
         self._freq = freq
         self._in_fader = InputFader(input)
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
-        self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
-
-        self._harm = Harmonizer(in_fader, transpo=[-5.0, 5.0], feedback=.3, winsize=.1)
-        self._mod = Freeverb(self._harm, size=Pow(Clip(cs, .0, .998), 4), damp=self._amp, bal=1, mul=cs)
-        self._comp = Compress(self._mod, thresh=-12, ratio=4, knee=.5)
-        self._pan = Pan(self._comp, outs=outs, pan=[.3,.7], spread=[.2,.2])
+        self._isON = Sig(cs) > .005
+        self._amp = MidiAdsr(notein['velocity'])
+        self._harm = Harmonizer(in_fader, transpo=[-7.0, 7.0], feedback=cs)
+        self._mod = Freeverb(self._harm, size=Pow(Clip(cs, .98, 1.0), 3), damp=0 ,bal=1, mul=Port(self._isON))
+        self._pan = Pan(self._mod, outs=outs, pan=[.3,.7], spread=cs)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

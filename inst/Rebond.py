@@ -33,7 +33,7 @@ class Rebond(PyoObject):
         self._outs = outs
         self._in_fader = InputFader(input)
         in_fader,cs,base_interval,outs,mul,add,lmax = convertArgsToLists(self._in_fader,cs,base_interval,outs,mul,add)
-        self._amp = MidiAdsr(notein['velocity'], attack=.01, decay=.1, sustain=.7, release=.1)
+        self._amp = MidiAdsr(notein['velocity'])
         self._pit = MToF(notein['pitch'])
         self._check = Change(cs)
         self._isON = Sig(cs) > .005

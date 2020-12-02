@@ -141,7 +141,7 @@ class Simpler:
         
         self.tra = MToT(noteinput['pitch']) * transpo
         self.amp = MidiAdsr(noteinput['velocity'])
-        self.panlfo = FastSine(((self.cs[0]*20)+1), quality=0, mul=.5, add=.5)
+        self.panlfo = FastSine(((self.cs[0]*80)+.01), quality=0, mul=.5, add=.5)
 
         if type(self.paths) is list:
             print(self.paths)
@@ -150,7 +150,7 @@ class Simpler:
             self.toMorph = []
             for i in range(3):
                 self.t.append(SndTable(self.paths[i], initchnls=2))
-            self.lfoStutter = FastSine(freq=self.tra, quality=0, mul=self.cs[1]*10)
+            self.lfoStutter = FastSine(freq=self.tra, quality=0, mul=self.cs[1])
             self.lfo = FastSine(self.tra, quality=0, mul=.5*self.lfoStutter, add=.5)
             self.nt = NewTable(length=22050./44100, chnls=2)
             self.Tmorph = TableMorph(self.lfo, self.nt, self.t)
@@ -173,7 +173,7 @@ class Simpler:
         self.damp = ButLP(self.oscT+denorm, freq=hfdamp).mix()
         self.hp = ButHP(self.damp+denorm, 50).mix()
         self.comp = Compress(self.hp, thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5).mix()
-        self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.panlfo, spread=.4, mul=mul)
+        self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.panlfo, mul=mul)
 
     def out(self):
         self.p.out()

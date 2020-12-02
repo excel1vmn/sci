@@ -69,8 +69,6 @@ for names in itemK:
     if names.endswith(".aif") | names.endswith(".wav"):
         drum_kit.append("drum_kit/" + names)
 
-impulseR = "snds/BatteryBenson.wav"
-
 # print(snds)
 # print(drum_kit)
 
@@ -92,7 +90,7 @@ raw = RawMidi(event)
 # p=Print(SIGTRIG, 1)
 
 #--- LAUNCH CONTROL XL ---#
-MULPOW = Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 5)
+MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 3))
 CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                         29,30,31,32,33,34,35,36,
                         49,50,51,52,53,54,55,56],
@@ -108,11 +106,11 @@ CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
 #--- NAKED BOARDS ---#
 # MULPOW = Pow(Midictl(ctlnumber=[0,1,2,3,4,5,6,7], init=0, channel=1), 5)
 # CS = Midictl(ctlnumber=[ 8, 9,10,11,12,13,14,15,
-#                             16,17,18,19,20,21,22,23,
-#                             24,25,26,27,28,29,30,31], 
-#                       init=[ 0, 0, 0, 0, 0, 0, 0 ,0,
-#                              0, 0, 0, 0, 0, 0, 0 ,0,
-#                              0, 0, 0, 0, 0, 0, 0, 0], channel=1)
+#                         16,17,18,19,20,21,22,23,
+#                         24,25,26,27,28,29,30,31], 
+#                   init=[ 0, 0, 0, 0, 0, 0, 0 ,0,
+#                          0, 0, 0, 0, 0, 0, 0 ,0,
+#                          0, 0, 0, 0, 0, 0, 0, 0], channel=1)
 #--- NAKED BOARDS ---#
 
 transpo = Bendin(brange=2, scale=1, channel=1)
@@ -183,7 +181,7 @@ prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.s
 fr = Frottement(Mix(prefx+dn), n0, CS[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS)
 ac = Accumulation(Mix(prefx+dn), n0, CS[17], delay=.025, outs=NUMOUTS)
 re = Rebond(Mix(prefx+dn), n0, CS[18], base_interval=.21, outs=NUMOUTS)
-oc = Oscillation(Mix(prefx+dn), n0, CS[19], freq=50, outs=NUMOUTS)
+oc = Oscillation(Mix(prefx+dn), n0, CS[19], freq=100, outs=NUMOUTS)
 fl = Flux(Mix(prefx+dn), n0, CS[20], freq=50, outs=NUMOUTS)
 ba = Balancement(Mix(prefx+dn), n0, CS[21], freq=50, outs=NUMOUTS)
 fe = Flexion(Mix(prefx+dn), n0, CS[22], freq=50, outs=NUMOUTS)
@@ -214,7 +212,7 @@ HP = EQ(Mix([fr,ac,re,oc,fl,ba,fe,pr,clean_sig],NUMOUTS), freq=lfdamp, q=.5, boo
 LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.2, boost=-40, type=2)
 HP.ctrl()
 LP.ctrl()
-COMP = Compress(LP, thresh=-12, ratio=4, knee=.5)
+COMP = Compress(LP, thresh=-10, ratio=4, knee=.5)
 downmix = Mix(COMP, voices=NUMOUTS, mul=.3).out()
 pre_output.addInput(0, downmix)
 pre_output.setAmp(0, 0, 1)
