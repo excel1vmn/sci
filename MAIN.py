@@ -114,7 +114,7 @@ CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
 #--- NAKED BOARDS ---#
 
 transpo = Bendin(brange=2, scale=1, channel=1)
-hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=18000, init=18000, channel=3)
+hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=15000, init=15000, channel=3)
 lfdamp = Midictl(ctlnumber=48, minscale=20, maxscale=18000, init=20, channel=3)
 # Frequency of the LFO applied to the speed of the moving notches.
 # lfofreq = Midictl(ctlnumber=13, minscale=0.1, maxscale=20, init=0.2, channel=6)
@@ -181,12 +181,11 @@ prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.s
 fr = Frottement(Mix(prefx+dn), n0, CS[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS)
 ac = Accumulation(Mix(prefx+dn), n0, CS[17], delay=.025, outs=NUMOUTS)
 re = Rebond(Mix(prefx+dn), n0, CS[18], base_interval=.21, outs=NUMOUTS)
-oc = Oscillation(Mix(prefx+dn), n0, CS[19], freq=100, outs=NUMOUTS)
+oc = Oscillation(Mix(prefx+dn), n0, CS[19], freq=20, outs=NUMOUTS)
 fl = Flux(Mix(prefx+dn), n0, CS[20], freq=50, outs=NUMOUTS)
 ba = Balancement(Mix(prefx+dn), n0, CS[21], freq=50, outs=NUMOUTS)
 fe = Flexion(Mix(prefx+dn), n0, CS[22], freq=50, outs=NUMOUTS)
-### Plus d'accent sur l'attaque et moins en tout temps
-pr = PercussionResonance(Mix(prefx+dn), n0, CS[23], ir=impulseR, freq=100, outs=NUMOUTS)
+pr = PercussionResonance(Mix(prefx+dn), n0, CS[23], freq=MToF(n0['pitch']), outs=NUMOUTS)
 ###############################################
 ############ TECHNIQUE D'ÉCRITURE #############
 ###############################################

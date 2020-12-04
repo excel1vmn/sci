@@ -32,15 +32,27 @@ class PercussionResonance(PyoObject):
         self._freq = freq
         self._in_fader = InputFader(input)
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
-        self._isON = Sig(cs) > .005
-        self._amp = MidiAdsr(notein['velocity'], release=5)
-        self._thresh = Thresh(in_fader, threshold=0.)
-        self._penv = TrigLinseg(notein['trigon'], [(0,0),(.005,8),(.1,2),(.5,0)])
-        self._reso = Resonx(in_fader, freq=MToF(notein['pitch']), q=self._amp*50, stages=4, mul=self._amp*10)
-        self._eq = EQ(self._reso, freq=MToF(notein['pitch']), q=(self._amp+1)*49, boost=self._amp*24, type=1)
-        self._comp = Compress(self._eq)
-        self._mod = Harmonizer(self._comp, transpo=10*self._penv, feedback=self._penv*.05, winsize=.1, mul=Port(self._isON))
-        self._pan = Pan(self._mod, outs=outs, pan=.5, spread=.3)
+        fol = Follower(in_fader) > .0001
+        csCheck = Sig(cs) > .005
+        self._isON = fol+csCheck == 2
+        self._amp = MidiAdsr(notein['velocity'])
+        self._logt = LogTable([(0,1), (128,50), (512,2), (8192,1)])
+        self._trigt = TrigEnv(notein['trigon'], self._logt)
+        self._bass = Sine((50*Clip(cs, .1, 1.2))*self._trigt, mul=self._amp)
+        self._dist = Disto(self._bass, Clip(cs,.5,.75), Clip(in_fader,.3,.6))
+        self._eq = EQ(self._dist, freq=80, q=10, boost=30, type=0)
+
+        self._inputFollow = Follower(self._trigt)
+        self._talk = self._inputFollow > .005
+        self._followAmp = Port(self._talk)
+        self._ampscl = Scale(self._followAmp, outmin=1, outmax=.1)
+
+        lfo = Sine(freq=[.2, .25], mul=1000*Follower(in_fader), add=1500)
+        self._reson = Resonx(in_fader, freq=lfo, q=5+self._amp*15, mul=5*self._ampscl)
+        self._harm = Harmonizer(self._reson, transpo=10, feedback=Clip(cs, .3, .7))
+        self._comp = Compress(self._harm, thresh=-10)
+        self._mod = Sig(Mix([self._comp,self._eq]), mul=Port(self._isON))
+        self._pan = Pan(self._mod, outs=outs)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

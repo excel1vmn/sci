@@ -38,7 +38,7 @@ class Rebond(PyoObject):
         self._check = Change(cs)
         self._isON = Sig(cs) > .005
         self._delay_seg = TrigLinseg(self._check+notein['trigon'], [(0,base_interval[0]),(8,base_interval[0] / 200)])
-        self._panner = FastSine((self._delay_seg*(cs*20))+1, quality=0, mul=.5, add=.5)
+        self._panner = FastSine((self._delay_seg*(cs*in_fader))+1, quality=0, mul=.5, add=.5)
         self._filt = Reson(in_fader, freq=self._pit, q=5+(15*self._amp)).mix()
         self._mod = SmoothDelay(self._filt, delay=self._delay_seg*((self._amp*4)+1), feedback=Clip(cs, min=.2, max=.5), maxdelay=1, mul=Port(self._isON)).mix()
         self._pan = Pan(self._mod, outs=outs[0], pan=self._panner, spread=.2)
