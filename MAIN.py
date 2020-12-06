@@ -162,7 +162,7 @@ drums = Drums(n10, drum_kit, toggles_row1, dn, transpo=transpo)
 a1 = Synth(n2, trigs[0], toggles1, [CS[0],CS[8]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[0])
 a2 = FreakSynth(n2, trigs[1], toggles2, [CS[1],CS[9]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[1])
 a3 = Simpler(n2, snds, trigs[2], toggles3, [CS[2],CS[10]], dn, transpo, hfdamp=hfdamp, autoswitch=False, withloop=False, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[2])
-a4 = WaveShape(n2, snds[10], trigs[3], toggles4, [CS[3],CS[11]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[3])
+a4 = WaveShape(n2, snds[8], trigs[3], toggles4, [CS[3],CS[11]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[3])
 
 ### ADD : 1 autre bouton de changement de style de jeu!!
 r1 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[4], toggles5, [CS[4],CS[12]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[4])

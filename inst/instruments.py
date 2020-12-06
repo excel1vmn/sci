@@ -6,12 +6,10 @@ import math
 
 class Synth:
     def __init__(self, noteinput, trig, toggles, cs, denorm, transpo=1, hfdamp=15000, lfofreq=0.2, audioIN=0, mul=1):
-        self.n = denorm
         self.trigCheck = Select(trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.changeParams)
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
-        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.toggleCheck = Change(toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX, arg=convertArgsToLists(toggles))
         self.cs = Sig(cs)
         self.input = Sig(audioIN).stop()
 
@@ -43,8 +41,8 @@ class Synth:
     def changeParams(self):
         print('works')
 
-    def toggleFX(self):
-        if Sig(self.toggles[0]).get() == 1:
+    def toggleFX(self, toggles):
+        if Sig(toggles[0][0]).get() == 1:
             print('on 1')
             self.input.play()
             self.inputFollow.play()
@@ -55,12 +53,12 @@ class Synth:
             self.inputFollow.stop()
             self.followAmp.stop()
 
-        if Sig(self.toggles[1]).get() == 1:
+        if Sig(toggles[0][1]).get() == 1:
             print('on 2')
         else:
             print('off 2')
 
-        if Sig(self.toggles[2]).get() == 1:
+        if Sig(toggles[0][2]).get() == 1:
             print('on 3')
         else:
             print('off 3')
@@ -69,9 +67,8 @@ class FreakSynth:
     def __init__(self, noteinput, trig, toggles, cs, denorm, transpo=1, hfdamp=5000, audioIN=0, mul=1):
         self.trigCheck = Select(trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.changeParams)
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
-        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.toggleCheck = Change(toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX, arg=convertArgsToLists(toggles))
         self.cs = Sig(cs)
         self.input = Sig(audioIN).stop()
 
@@ -106,8 +103,8 @@ class FreakSynth:
     def changeParams(self):
         print('works')
 
-    def toggleFX(self):
-        if Sig(self.toggles[0]).get() == 1:
+    def toggleFX(self, toggles):
+        if Sig(toggles[0][0]).get() == 1:
             print('on 1')
             self.input.play()
             self.inputFollow.play()
@@ -118,12 +115,12 @@ class FreakSynth:
             self.inputFollow.stop()
             self.followAmp.stop()
 
-        if Sig(self.toggles[1]).get() == 1:
+        if Sig(toggles[0][1]).get() == 1:
             print('on 2')
         else:
             print('off 2')
 
-        if Sig(self.toggles[2]).get() == 1:
+        if Sig(toggles[0][2]).get() == 1:
             print('on 3')
         else:
             print('off 3')
@@ -133,15 +130,14 @@ class Simpler:
         self.paths = paths
         self.trigCheck = Select(trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.shuffleSamples)
-        self.toggles = toggles
-        self.toggleCheck = Select(self.toggles, 1)
-        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.toggleCheck = Change(toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX, arg=convertArgsToLists(toggles))
         self.cs = Sig(cs)
         self.input = Sig(audioIN).stop()
         
         self.tra = MToT(noteinput['pitch']) * transpo
         self.amp = MidiAdsr(noteinput['velocity'])
-        self.panlfo = FastSine(((self.cs[0]*80)+.01), quality=0, mul=.5, add=.5)
+        self.panlfo = FastSine(((self.cs[0]*10)+.1), quality=0, mul=.3, add=.5)
 
         if type(self.paths) is list:
             print(self.paths)
@@ -150,8 +146,8 @@ class Simpler:
             self.toMorph = []
             for i in range(3):
                 self.t.append(SndTable(self.paths[i], initchnls=2))
-            self.lfoStutter = FastSine(freq=self.tra, quality=0, mul=self.cs[1])
-            self.lfo = FastSine(self.tra, quality=0, mul=.5*self.lfoStutter, add=.5)
+            self.lfoStutter = FastSine(freq=Clip(self.cs[0],1,100), quality=0, mul=self.cs[1]*.5, add=.5)
+            self.lfo = FastSine(self.tra*Clip(cs[0],1,5), quality=0, mul=self.cs[1], add=.5)
             self.nt = NewTable(length=22050./44100, chnls=2)
             self.Tmorph = TableMorph(self.lfo, self.nt, self.t)
             self.oscT = OscTrig(self.nt, noteinput['trigon'], self.tra, mul=self.amp).mix()
@@ -172,7 +168,7 @@ class Simpler:
 
         self.damp = ButLP(self.oscT+denorm, freq=hfdamp).mix()
         self.hp = ButHP(self.damp+denorm, 50).mix()
-        self.comp = Compress(self.hp, thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5).mix()
+        self.comp = Compress(self.hp, thresh=-12, ratio=4, knee=.5).mix()
         self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.panlfo, mul=mul)
 
     def out(self):
@@ -190,8 +186,8 @@ class Simpler:
                 self.t[i].setSound(self.newsound)
                 print(self.newsound)
 
-    def toggleFX(self):
-        if Sig(self.toggles[0]).get() == 1:
+    def toggleFX(self, toggles):
+        if Sig(toggles[0][0]).get() == 1:
             print('on 1')
             self.input.play()
             self.inputFollow.play()
@@ -202,12 +198,12 @@ class Simpler:
             self.inputFollow.stop()
             self.followAmp.stop()
 
-        if Sig(self.toggles[1]).get() == 1:
+        if Sig(toggles[0][1]).get() == 1:
             print('on 2')
         else:
             print('off 2')
 
-        if Sig(self.toggles[2]).get() == 1:
+        if Sig(toggles[0][2]).get() == 1:
             print('on 3')
         else:
             print('off 3')
@@ -216,23 +212,19 @@ class WaveShape:
     def __init__(self, noteinput, path, trig, toggles, cs, denorm, transpo=1, hfdamp=5000, audioIN=0, mul=1):
         self.trigCheck = Select(trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.changeParams)
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
-        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.toggleCheck = Change(toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX, arg=convertArgsToLists(toggles))
         self.cs = Sig(cs)
         self.input = Sig(audioIN).stop()
 
         self.snd = SndTable(path, initchnls=2)
         self.freq = self.snd.getRate()
-        # self.dur = self.snd.getDur()
-
         self.tra = MToT(noteinput['pitch']) * transpo
-        self.pit = MToF(noteinput['pitch']) * transpo
         self.amp = MidiAdsr(noteinput['velocity'])
 
         self.t = HarmTable([1,0,.33,0,.2,0,.143,0,.111])
-        self.lfo = Osc(self.t, Scale(self.cs[1], outmin=8, outmax=.01), mul=.5*self.cs[1], add=.5*self.cs[1]).mix()
-        self.osc = OscLoop(self.snd, (self.freq*self.tra), feedback=self.lfo, mul=self.amp).mix()
+        self.lfo = Osc(self.t, Scale(self.cs[1], outmin=8, outmax=.01), mul=self.cs[1]).mix()
+        self.osc = OscLoop(self.snd, (self.freq*self.tra)*Scale(self.lfo, outmin=1, outmax=10), mul=self.amp).mix()
 
         # Waveshaped distortion
         self.table = ExpTable([(0,-.25),(4096,0),(8192,0)], exp=30)
@@ -240,6 +232,7 @@ class WaveShape:
         self.high_table.reverse()
         self.table.add(self.high_table)
         self.lookShape = Lookup(self.table, self.osc).mix()
+        self.dist = Disto(self.lookShape, drive=Clip(self.cs[0],.1,.9), slope=Clip(self.lfo,0,1))
 
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
@@ -250,8 +243,7 @@ class WaveShape:
 
         self.veltrand = TrigRand(noteinput['trigon'], .1, 10)
         self.ampLfo = FastSine(self.veltrand, quality=0, mul=.5, add=.5)
-        self.interp = Interp(self.osc, self.lookShape, self.lfo*cs[0]).mix()
-        self.damp = ButLP(self.interp+denorm, freq=hfdamp).mix()
+        self.damp = ButLP(self.dist+denorm, freq=hfdamp).mix()
         self.hp = ButHP(self.damp+denorm, 50).mix()
         self.comp = Compress(self.hp, thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=0.5).mix()
         self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.ampLfo, spread=.2, mul=mul)
@@ -266,8 +258,8 @@ class WaveShape:
     def changeParams(self):
         print('works')
 
-    def toggleFX(self):
-        if Sig(self.toggles[0]).get() == 1:
+    def toggleFX(self, toggles):
+        if Sig(toggles[0][0]).get() == 1:
             print('on 1')
             self.input.play()
             self.inputFollow.play()
@@ -278,12 +270,12 @@ class WaveShape:
             self.inputFollow.stop()
             self.followAmp.stop()
 
-        if Sig(self.toggles[1]).get() == 1:
+        if Sig(toggles[0][1]).get() == 1:
             print('on 2')
         else:
             print('off 2')
 
-        if Sig(self.toggles[2]).get() == 1:
+        if Sig(toggles[0][2]).get() == 1:
             print('on 3')
         else:
             print('off 3')
@@ -329,18 +321,15 @@ class ReSampler:
         self.notes = Notein(poly=10, scale=0, first=0, last=127, channel=notechannel)
         self.trigCheck = Select(trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.rec)
-        self.toggles = toggles
-        self.toggleCheck = Change(self.toggles)
-        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX)
+        self.toggleCheck = Change(toggles)
+        self.toggleChange = TrigFunc(self.toggleCheck, self.toggleFX, arg=convertArgsToLists(toggles))
         self.cs = Sig(cs)
-        self.check = Change(self.toggles)
-        self.toggleChange = TrigFunc(self.check, self.toggleFX)
        
         self.envt = CosTable([(0,0), (50,1), (250,.3), (8191,0)])
         self.ingoreMIDI = False
-        self.mids = [60]
+        self._mids = [60]
         self.seq = Beat(time=.25, taps=16, w1=90, w2=40, w3=25).stop()
-        self.auto = Iter(self.seq, self.mids).stop()
+        self.auto = Iter(self.seq, self._mids).stop()
         self.trigenv = TrigEnv(self.seq, self.envt).stop()
         self.amp = MidiAdsr(self.notes['velocity'])
         self.tra = MToT(self.notes['pitch']) * transpo
@@ -360,7 +349,7 @@ class ReSampler:
         self.randPitches = [.25,.5,.75,1,1.25,1.5,1.75,2]
         self.pitch1 = Choice(choice=self.randPitches, freq=self.trMod).stop()
         self.pitch2 = Sig(self.tra+self.auto)
-        self.start = Phasor(freq=.2, mul=self.nt.getDur()-(self.nt.getDur()*1-self.toggles[1]))
+        self.start = Phasor(freq=.2, mul=self.nt.getDur()-(self.nt.getDur()*1-toggles[1]))
         self.dur1 = Choice(choice=[.03125,.0625,.125,.25,.33,.66], freq=3)
         self.dur2 = self.nt.getDur()
         # PITCH RANDOMIZER #
@@ -372,7 +361,7 @@ class ReSampler:
         self.high_table.reverse()
         self.table.add(self.high_table)
         self.lookShape = Lookup(self.table, self.loop)
-        self.dist = Disto(self.lookShape, drive=Clip(self.cs[1],0,1), slope=.95*self.trMod).mix()
+        self.dist = Disto(self.lookShape, drive=Clip(self.cs[1],0,1), slope=.95*Clip(self.trMod,0,1)).mix()
 
         # SIDECHAIN #
         self.inputFollow = Follower(audioREC, freq=10).stop()
@@ -425,8 +414,8 @@ class ReSampler:
         self.lst.append((8191, 0))
         self.ind.replace(self.lst)
 
-    def toggleFX(self):
-        if Sig(self.toggles[0]).get() == 1:
+    def toggleFX(self, toggles):
+        if Sig(toggles[0][0]).get() == 1:
             print('on 1')
             self.inputFollow.play()
             self.followAmp.play()
@@ -435,7 +424,7 @@ class ReSampler:
             self.inputFollow.stop()
             self.followAmp.stop()
 
-        if Sig(self.toggles[1]).get() == 1:
+        if Sig(toggles[0][1]).get() == 1:
             print('on 2')
             for i in range(len(self.randPitches)):
                 self.randPitches.pop(i)
@@ -450,7 +439,7 @@ class ReSampler:
             self.pitch2.play()
             self.dur1.stop()
 
-        if Sig(self.toggles[2]).get() == 1:
+        if Sig(toggles[0][2]).get() == 1:
             print('on 3')
             self.notes.stop()
             self.seq.play()
@@ -464,15 +453,15 @@ class ReSampler:
             self.auto.stop()
             self.trigenv.stop()
             self.ingoreMIDI = False
-            for i in range(len(self.mids) - 1):
-                self.mids.pop()
+            for i in range(len(self._mids) - 1):
+                self._mids.pop()
 
     def noteon(self, voice):
         pitch = int(self.notes['pitch'].get(all=True)[voice])
         if self.ingoreMIDI != True:
-            if(len(self.mids) <= 12):
-                self.mids.append(midiToTranspo(pitch))
+            if(len(self._mids) <= 12):
+                self._mids.append(midiToTranspo(pitch))
             else:
-                self.mids.pop(0)
-                self.mids.append(midiToTranspo(pitch))
-        self.auto.setChoice(self.mids)
+                self._mids.pop(0)
+                self._mids.append(midiToTranspo(pitch))
+        self.auto.setChoice(self._mids)
