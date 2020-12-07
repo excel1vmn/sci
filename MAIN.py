@@ -90,7 +90,7 @@ raw = RawMidi(event)
 # p=Print(SIGTRIG, 1)
 
 #--- LAUNCH CONTROL XL ---#
-MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], init=0, channel=6), 3))
+MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], minscale=0, maxscale=2, init=0, channel=6), 3))
 CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                         29,30,31,32,33,34,35,36,
                         49,50,51,52,53,54,55,56],
@@ -251,4 +251,4 @@ s.recordOptions(dur=-1, filename=path, fileformat=0, sampletype=1)
 s.recstart()
 ### RECORDING SCRIPT ###
 
-s.gui(locals())
+s.gui(locals(), title=NAME)
