@@ -10,27 +10,32 @@ from inst.Flux import *
 from inst.Balancement import *
 from inst.Flexion import *
 from inst.PercussionResonance import *
-# from gridHandler import *
+from pynput import keyboard
+from datetime import datetime
 import math, os, sys
+# from gridHandler import *
 # import threading
-# import keyboard
 
 ###############################################
 ################ SERVER SETUP #################
 ###############################################
-NAME = "MITÉ (Module d'interprétation de techniques d'écriture)"
+NAME = "MITÉ (Module d'improvisation de techniques d'écriture)"
 NUMOUTS = 2
 SOUND_CARD = 'INT'
+ins = pa_get_output_devices()
+print(ins)
 
 # SERVER SETUP
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
+        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='pa')
+        # s.setInOutDevice(ins[0].index('Babyface Pro (71965908): USB Audio (hw:1,0)'))
         s.setInOutDevice(0)
         print('EXT')
     else:
         s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
-        s.setOutputDevice(3)
+        s.setOutputDevice(ins[1][ins[0].index('pulse')])
+        # s.setOutputDevice(2)
         print('INT')
 else:
     s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='jack')
@@ -41,7 +46,7 @@ else:
 # LINUX AUDIO/MIDI CONFIG
 def scanMidi():
     s.setMidiInputDevice(99)
-    # s.setMidiOutputDevice(99)
+    s.setMidiOutputDevice(99)
     pa_list_devices()
     pm_list_devices()
     print('scanned')
@@ -49,6 +54,7 @@ def scanMidi():
 scanMidi()
 s.boot().start()
 s.amp = 1
+sr = s.getSamplingRate()
 ###############################################
 ################ SERVER SETUP #################
 ###############################################
@@ -90,7 +96,7 @@ raw = RawMidi(event)
 # p=Print(SIGTRIG, 1)
 
 #--- LAUNCH CONTROL XL ---#
-MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], minscale=0, maxscale=2, init=0, channel=6), 3))
+MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], minscale=0, maxscale=1, init=0, channel=6), 3))
 CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                         29,30,31,32,33,34,35,36,
                         49,50,51,52,53,54,55,56],
@@ -162,7 +168,7 @@ drums = Drums(n10, drum_kit, toggles_row1, dn, transpo=transpo)
 a1 = Synth(n2, trigs[0], toggles1, [CS[0],CS[8]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[0])
 a2 = FreakSynth(n2, trigs[1], toggles2, [CS[1],CS[9]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[1])
 a3 = Simpler(n2, snds, trigs[2], toggles3, [CS[2],CS[10]], dn, transpo, hfdamp=hfdamp, autoswitch=False, withloop=False, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[2])
-a4 = WaveShape(n2, snds[8], trigs[3], toggles4, [CS[3],CS[11]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[3])
+a4 = WaveShape(n2, snds[6], trigs[3], toggles4, [CS[3],CS[11]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[3])
 
 ### ADD : 1 autre bouton de changement de style de jeu!!
 r1 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[4], toggles5, [CS[4],CS[12]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[4])
@@ -203,7 +209,7 @@ pr = PercussionResonance(Mix(prefx+dn), n0, CS[23], freq=MToF(n0['pitch']), outs
 ###############################################
 ################ SIGNAL PATH ##################
 ###############################################
-clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUMOUTS), thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5)
+clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUMOUTS), thresh=-6, ratio=4, risetime=.01, falltime=.2, knee=.5)
 
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
@@ -211,7 +217,7 @@ HP = EQ(Mix([fr,ac,re,oc,fl,ba,fe,pr,clean_sig],NUMOUTS), freq=lfdamp, q=.5, boo
 LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.2, boost=-40, type=2)
 HP.ctrl()
 LP.ctrl()
-COMP = Compress(LP, thresh=-10, ratio=4, knee=.5)
+COMP = Compress(LP, thresh=-6, ratio=4, knee=.5)
 downmix = Mix(COMP, voices=NUMOUTS, mul=.3).out()
 pre_output.addInput(0, downmix)
 pre_output.setAmp(0, 0, 1)
@@ -246,9 +252,22 @@ pre_output.setAmp(0, 1, 1)
 ### MONOME GRID ###
 
 ### RECORDING SCRIPT ###
-path = os.path.join(os.path.expanduser("~"), "Desktop", "synth.wav")
+path = os.path.join(os.path.expanduser('~'), 'Desktop', 'rec_' + datetime.now().strftime('%y%m%d_%Hh%M') + '.wav')
 s.recordOptions(dur=-1, filename=path, fileformat=0, sampletype=1)
-s.recstart()
 ### RECORDING SCRIPT ###
+
+def on_release(key):
+    if key == keyboard.Key.tab:
+        print('Recording...')
+        s.recstart()
+    if key == keyboard.Key.esc:
+        print('Quitting...')
+        s.recstop()
+        s.closeGui()
+        return False
+
+listener = keyboard.Listener(
+    on_release=on_release)
+listener.start()
 
 s.gui(locals(), title=NAME)

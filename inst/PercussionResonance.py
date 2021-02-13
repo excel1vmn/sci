@@ -39,7 +39,17 @@ class PercussionResonance(PyoObject):
         self._logt = LogTable([(0,1), (128,50), (512,2), (8192,1)])
         self._trigt = TrigEnv(notein['trigon'], self._logt)
         self._bass = Sine((50*Clip(cs, .1, 1.2))*self._trigt, mul=self._amp)
-        self._dist = Disto(self._bass, Clip(cs,.5,.75), Clip(in_fader,.3,.6))
+        self._wubb = Sine((50*Clip(cs, .1, 1.2))*self._trigt, mul=self._amp*Clip(in_fader,0,1))
+        
+        # Waveshaped distortion
+        self._table = ExpTable([(0,-.25),(4096,.5),(8192,0)], exp=30)
+        self._high_table = ExpTable([(0,1),(2000,1),(4096,.3),(4598,-1),(8192,0)],
+                            exp=5, inverse=False)
+        self._high_table.reverse()
+        self._table.add(self._high_table)
+        self._table.view()
+        self._lookShape = Lookup(self._table, Mix([self._bass,self._wubb]))
+        self._dist = Disto(self._lookShape, Clip(cs,.5,.75), Clip(in_fader,.3,.5))
         self._eq = EQ(self._dist, freq=80, q=10, boost=30, type=0)
 
         self._inputFollow = Follower(self._trigt)
@@ -48,10 +58,9 @@ class PercussionResonance(PyoObject):
         self._ampscl = Scale(self._followAmp, outmin=1, outmax=.1)
 
         lfo = Sine(freq=[.2, .25], mul=1000*Follower(in_fader), add=1500)
-        self._reson = Resonx(in_fader, freq=lfo, q=5+self._amp*15, mul=5*self._ampscl)
-        self._harm = Harmonizer(self._reson, transpo=10, feedback=Clip(cs, .3, .7))
-        self._comp = Compress(self._harm, thresh=-10)
-        self._mod = Sig(Mix([self._comp,self._eq]), mul=Port(self._isON))
+        self._reson = Resonx(in_fader, freq=lfo, q=5+self._amp*10, mul=5*self._ampscl)
+        self._comp = Compress(Mix([self._reson,self._eq]), thresh=-10)
+        self._mod = Sig(self._comp, mul=Port(self._isON))
         self._pan = Pan(self._mod, outs=outs)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
