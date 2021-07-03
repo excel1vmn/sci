@@ -19,7 +19,7 @@ import math, os, sys
 ###############################################
 ################ SERVER SETUP #################
 ###############################################
-NAME = "MITÉ (Module d'improvisation de techniques d'écriture)"
+NAME = "SITÉ (Système d'improvisation de techniques d'écriture)"
 NUMOUTS = 2
 SOUND_CARD = 'INT'
 ins = pa_get_output_devices()
@@ -28,19 +28,20 @@ print(ins)
 # SERVER SETUP
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='pa')
-        # s.setInOutDevice(ins[0].index('Babyface Pro (71965908): USB Audio (hw:1,0)'))
-        s.setInOutDevice(0)
+        s = Server(sr=48000, buffersize=1024, nchnls=12, duplex=1)
+        s.setInOutDevice(10)
+        # print(s.setInOutDevice(ins[0].index('Babyface Pro (71965908): USB Audio (hw:2,0)')+1))
         print('EXT')
     else:
-        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
-        s.setOutputDevice(ins[1][ins[0].index('pulse')])
-        # s.setOutputDevice(2)
+        s = Server(sr=48000, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
+        s.setOutputDevice((ins[1][ins[0].index('pulse')]))
+        # print(s.setOutputDevice(ins[1][ins[0].index('pulse')]))
         print('INT')
 else:
-    s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='jack')
+    s = Server(nchnls=NUMOUTS, duplex=1, audio='jack')
+    s.setInOutDevice(ins[1][ins[0].index('jack')]-2)
     s.setJackAuto()
-    s.setInOutDevice(1)
+    # print(ins[1][ins[0].index('jack')])
     print('JACK')
 
 # LINUX AUDIO/MIDI CONFIG
@@ -79,13 +80,8 @@ for names in itemK:
 # print(drum_kit)
 
 ###############################################
-############### MIDI PARAMETERS ###############
+################## MIDI SETUP #################
 ###############################################
-# def ctl_scan(ctlnum, midichnl):
-    # print(ctlnum, midichnl)
-    # print(HP.boost.get())
-# ctlscan = CtlScan2(ctl_scan, False)
-
 def event(status, data1, data2):
     # print(status, data1, data2)
     if data1 == 105 and data2 == 127:
@@ -96,10 +92,16 @@ raw = RawMidi(event)
 # p=Print(SIGTRIG, 1)
 
 #--- LAUNCH CONTROL XL ---#
-MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], minscale=0, maxscale=1, init=0, channel=6), 3))
+MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], minscale=0, maxscale=[1,1,1,1,1,1,1,3], init=0, channel=6), 3))
 CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                         29,30,31,32,33,34,35,36,
                         49,50,51,52,53,54,55,56],
+              minscale=[ 0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0,-12,
+                         0, 0, 0, 0, 0, 0, 0, 0],
+              maxscale=[ 1, 1, 1, 1, 1, 1, 1, 1,
+                         1, 1, 1, 1, 1, 1, 1,-30,
+                         1, 1, 1, 1, 1, 1, 1, 1],
                   init=[ 0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0, 0, 0], channel=6)
@@ -119,12 +121,6 @@ CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
 #                          0, 0, 0, 0, 0, 0, 0, 0], channel=1)
 #--- NAKED BOARDS ---#
 
-transpo = Bendin(brange=2, scale=1, channel=1)
-hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=15000, init=15000, channel=3)
-lfdamp = Midictl(ctlnumber=48, minscale=20, maxscale=18000, init=20, channel=3)
-# Frequency of the LFO applied to the speed of the moving notches.
-# lfofreq = Midictl(ctlnumber=13, minscale=0.1, maxscale=20, init=0.2, channel=6)
-
 #--- LAUNCHPAD MINI ---#
 # Toggles certain parameters of ReSampler class instruments 
 trigs = Midictl(ctlnumber=[0,1,2,3,4,5,6,7], channel=3)
@@ -142,13 +138,15 @@ toggles_row2 = Midictl(ctlnumber=[40,41,42,43,44,45,46,47], channel=3)
 
 n1 = Notein(poly=10, scale=0, first=0, last=127, channel=1)
 n2 = Notein(poly=10, scale=0, first=0, last=127, channel=2)
-# n3 = Notein(poly=10, scale=0, first=0, last=127, channel=3)
-# n4 = Notein(poly=10, scale=0, first=0, last=127, channel=4)
 n10 = Notein(poly=10, scale=0, first=0, last=127, channel=10)
 ### Sert à manipuler les gestes musicaux / techniques d'écriture ### 
 n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
+
+transpo = Bendin(brange=2, scale=1, channel=1)
+hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=15000, init=15000, channel=3)
+lfdamp = Midictl(ctlnumber=48, minscale=20, maxscale=18000, init=20, channel=3)
 ###############################################
-############### MIDI PARAMETERS ###############
+################## MIDI SETUP #################
 ###############################################
 
 ### EXTERNAL INPUT ###
@@ -156,11 +154,10 @@ n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
 # input2 = Input(chnl=1, mul=.7)
 ### EXTERNAL INPUT ###
 
-pre_output = Mixer(outs=NUMOUTS, chnls=1)
-
 ###############################################
 ################# INSTRUMENTS #################
 ###############################################
+pre_output = Mixer(outs=NUMOUTS, chnls=1)
 dn = Noise(1e-24) # low-level noise for denormals
 
 drums = Drums(n10, drum_kit, toggles_row1, dn, transpo=transpo)
@@ -174,15 +171,15 @@ a4 = WaveShape(n2, snds[6], trigs[3], toggles4, [CS[3],CS[11]], dn, transpo, hfd
 r1 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[4], toggles5, [CS[4],CS[12]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[4])
 r2 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[5], toggles6, [CS[5],CS[13]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[5])
 r3 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[6], toggles7, [CS[6],CS[14]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[6])
-r4 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[7], toggles8, [CS[7],CS[15]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[7])
+# r4 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[7], toggles8, [CS[7],CS[15]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[7])
 
-prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig()], mul=toggles_row2)
+prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig()], mul=toggles_row2)
 ###############################################
 ################# INSTRUMENTS #################
 ###############################################
 
 ###############################################
-############ TECHNIQUE D'ÉCRITURE #############
+############ MODÈLES ÉNERGÉTIQUES #############
 ###############################################
 fr = Frottement(Mix(prefx+dn), n0, CS[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS)
 ac = Accumulation(Mix(prefx+dn), n0, CS[17], delay=.025, outs=NUMOUTS)
@@ -193,7 +190,7 @@ ba = Balancement(Mix(prefx+dn), n0, CS[21], freq=50, outs=NUMOUTS)
 fe = Flexion(Mix(prefx+dn), n0, CS[22], freq=50, outs=NUMOUTS)
 pr = PercussionResonance(Mix(prefx+dn), n0, CS[23], freq=MToF(n0['pitch']), outs=NUMOUTS)
 ###############################################
-############ TECHNIQUE D'ÉCRITURE #############
+############ MODÈLES ÉNERGÉTIQUES #############
 ###############################################
 
 # isUsedCheck = Select(MULPOW, .05)
@@ -209,16 +206,16 @@ pr = PercussionResonance(Mix(prefx+dn), n0, CS[23], freq=MToF(n0['pitch']), outs
 ###############################################
 ################ SIGNAL PATH ##################
 ###############################################
-clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),r4.sig(),drums.sig()], voices=NUMOUTS), thresh=-6, ratio=4, risetime=.01, falltime=.2, knee=.5)
+clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()], voices=NUMOUTS), thresh=-6, ratio=4, risetime=.01, falltime=.2, knee=.5)
 
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
 HP = EQ(Mix([fr,ac,re,oc,fl,ba,fe,pr,clean_sig],NUMOUTS), freq=lfdamp, q=.5, boost=-30, type=1)
-LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.2, boost=-40, type=2)
+LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.2, boost=-40, type=2, mul=MULPOW[7])
 HP.ctrl()
 LP.ctrl()
-COMP = Compress(LP, thresh=-6, ratio=4, knee=.5)
-downmix = Mix(COMP, voices=NUMOUTS, mul=.3).out()
+COMP = Compress(LP.mix(), thresh=CS[15], ratio=4, knee=.5, outputAmp=True)
+downmix = Mix(LP * COMP, voices=NUMOUTS, mul=.3).out()
 pre_output.addInput(0, downmix)
 pre_output.setAmp(0, 0, 1)
 pre_output.setAmp(0, 1, 1)

@@ -169,7 +169,7 @@ class Simpler:
         self.damp = ButLP(self.oscT+denorm, freq=hfdamp).mix()
         self.hp = ButHP(self.damp+denorm, 50).mix()
         self.comp = Compress(self.hp, thresh=-12, ratio=4, knee=.5).mix()
-        self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.panlfo, mul=mul)
+        self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.panlfo, mul=mul)
 
     def out(self):
         self.p.out()
@@ -245,8 +245,8 @@ class WaveShape:
         self.ampLfo = FastSine(self.veltrand, quality=0, mul=.5, add=.5)
         self.damp = ButLP(self.dist+denorm, freq=hfdamp).mix()
         self.hp = ButHP(self.damp+denorm, 50).mix()
-        self.comp = Compress(self.hp, thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=0.5).mix()
-        self.p = Pan(self.comp * self.ampscl, outs=2, pan=self.ampLfo, spread=.2, mul=mul)
+        # self.comp = Compress(self.hp, thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=0.5).mix()
+        self.p = Pan(self.hp * self.ampscl, outs=2, pan=self.ampLfo, spread=.2, mul=mul)
 
     def out(self):
         self.p.out()
