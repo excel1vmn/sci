@@ -34,8 +34,8 @@ class Flux(PyoObject):
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
         self._isON = Sig(cs) > .005
         self._amp = MidiAdsr(notein['velocity'])
-        self._harm = Harmonizer(in_fader, transpo=[-7.0, 7.0], feedback=Clip(cs, 0, .6), mul=Port(self._isON))
-        self._mod = Freeverb(self._harm, size=Clip(cs, .7, .99), damp=self._amp, bal=1)
+        self._harm = Harmonizer(in_fader, transpo=[-7.0, 7.0], feedback=Clip(cs, 0, .9), mul=Port(self._isON))
+        self._mod = Freeverb(self._harm, size=Clip(cs, .7, .999), damp=self._amp, bal=1)
         self._pan = Pan(self._mod, outs=outs, pan=[.4,.6], spread=cs)
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()

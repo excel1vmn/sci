@@ -35,9 +35,9 @@ class Accumulation(PyoObject):
         self._passes = []
         for i in range(4):
             if i%2 == 0:
-                self._passes.append(Allpass(self._mod[0], delay=Port((cs[0])*self._rand[0], risetime=.005, falltime=.005)).mix())
+                self._passes.append(Allpass(self._mod[0], delay=Port((cs[0])*self._rand[0], risetime=.02, falltime=.02)).mix())
             else:
-                self._passes.append(Allpass(self._mod[1], delay=Port((cs[0])*self._rand[1], risetime=.005, falltime=.005)).mix())
+                self._passes.append(Allpass(self._mod[1], delay=Port((cs[0])*self._rand[1], risetime=.02, falltime=.02)).mix())
         self._passesM = Mix(self._passes, outs[0], mul=Port(self._isON)).mix()
         self._pan = Pan(self._passesM, outs=outs[0], pan=self._panner, spread=.3)
         self._out = Sig(self._pan, mul=mul, add=add)

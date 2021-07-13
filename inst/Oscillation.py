@@ -34,10 +34,10 @@ class Oscillation(PyoObject):
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
         self._isON = Sig(cs) > .005
         self._check = Change(notein['trigon'])
-        self._trig = TrigLinseg(self._check, [(0,1),(.05,10),(1,1)], mul=cs).mix()
+        self._trig = TrigLinseg(self._check, [(0,1),(.05,10),(1,4),(3,1)], mul=cs).mix()
         self._shifter = Phasor([2.2,2.8], mul=freq*self._trig, add=freq*self._trig).mix()
         self._mod = FreqShift(in_fader, shift=self._shifter, mul=Port(self._isON)).mix()
-        self._pan = Pan(self._mod, outs=outs, pan=[.1,.9], spread=[.1,.1])
+        self._pan = Pan(self._mod, outs=outs, pan=[.1,.9], spread=[.4,.4])
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 

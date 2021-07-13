@@ -122,7 +122,7 @@ CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
 #--- NAKED BOARDS ---#
 
 #--- LAUNCHPAD MINI ---#
-# Toggles certain parameters of ReSampler class instruments 
+# Toggles certain parameters of ReSampler class instruments
 trigs = Midictl(ctlnumber=[0,1,2,3,4,5,6,7], channel=3)
 toggles1 = Midictl(ctlnumber=[ 8,16,24], channel=3)
 toggles2 = Midictl(ctlnumber=[ 9,17,25], channel=3)
@@ -173,7 +173,7 @@ r2 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[5], toggles6, [CS[5],CS[13]], 
 r3 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[6], toggles7, [CS[6],CS[14]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[6])
 # r4 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[7], toggles8, [CS[7],CS[15]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[7])
 
-prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig()], mul=toggles_row2)
+prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()], mul=toggles_row2)
 ###############################################
 ################# INSTRUMENTS #################
 ###############################################
@@ -214,12 +214,12 @@ HP = EQ(Mix([fr,ac,re,oc,fl,ba,fe,pr,clean_sig],NUMOUTS), freq=lfdamp, q=.5, boo
 LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.2, boost=-40, type=2, mul=MULPOW[7])
 HP.ctrl()
 LP.ctrl()
-COMP = Compress(LP.mix(), thresh=CS[15], ratio=4, knee=.5, outputAmp=True)
+COMP = Compress(LP.mix(), thresh=CS[15], ratio=8, knee=.5, outputAmp=True)
 downmix = Mix(LP * COMP, voices=NUMOUTS, mul=.3).out()
 pre_output.addInput(0, downmix)
 pre_output.setAmp(0, 0, 1)
 pre_output.setAmp(0, 1, 1)
-# spectrum = Spectrum(downmix)
+spectrum = Spectrum(downmix)
 ###############################################
 ################ SIGNAL PATH ##################
 ###############################################

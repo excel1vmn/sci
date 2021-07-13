@@ -5,7 +5,7 @@ from pyo import *
 import math
 
 class Synth:
-    def __init__(self, noteinput, trig, toggles, cs, denorm, transpo=1, hfdamp=15000, lfofreq=0.2, audioIN=0, mul=1):
+    def __init__(self, noteinput, trig, toggles, cs, denorm, transpo=1, hfdamp=15000, audioIN=0, mul=1):
         self.trigCheck = Select(trig, 1)
         self.trigChange = TrigFunc(self.trigCheck, self.changeParams)
         self.toggleCheck = Change(toggles)
@@ -21,7 +21,7 @@ class Synth:
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
         self.talk = self.inputFollow > .005
-        self.followAmp = Port(self.talk, risetime=.05, falltime=.1).stop()
+        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.01).stop()
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 
@@ -85,7 +85,7 @@ class FreakSynth:
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
         self.talk = self.inputFollow > .005
-        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.1).stop()
+        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.01).stop()
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 
@@ -162,7 +162,7 @@ class Simpler:
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
         self.talk = self.inputFollow > .005
-        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.1).stop()
+        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.01).stop()
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 
@@ -237,7 +237,7 @@ class WaveShape:
         # SIDECHAIN #
         self.inputFollow = Follower(self.input, freq=10).stop()
         self.talk = self.inputFollow > .005
-        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.1).stop()
+        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.01).stop()
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 
@@ -281,7 +281,7 @@ class WaveShape:
             print('off 3')
 
 class Drums:
-    def __init__(self, noteinput, paths, cs, denorm, transpo=1, hfdamp=5000, lfofreq=0.2, audioIN=0, mul=1):
+    def __init__(self, noteinput, paths, cs, denorm, transpo=1, hfdamp=5000, audioIN=0, mul=1):
         self.cs = Sig(cs)
         self.tra = MToT(noteinput['pitch']) * transpo
         self.pit = MToF(noteinput['pitch']) * transpo
@@ -328,7 +328,7 @@ class ReSampler:
         self.envt = CosTable([(0,0), (50,1), (250,.3), (8191,0)])
         self.ingoreMIDI = False
         self._mids = [60]
-        self.seq = Beat(time=.25, taps=16, w1=90, w2=40, w3=25).stop()
+        self.seq = Beat(time=.25, taps=12, w1=90, w2=40, w3=25).stop()
         self.auto = Iter(self.seq, self._mids).stop()
         self.trigenv = TrigEnv(self.seq, self.envt).stop()
         self.amp = MidiAdsr(self.notes['velocity'])
@@ -366,7 +366,7 @@ class ReSampler:
         # SIDECHAIN #
         self.inputFollow = Follower(audioREC, freq=10).stop()
         self.talk = self.inputFollow > .005
-        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.1).stop()
+        self.followAmp = Port(self.talk, risetime=0.05, falltime=0.01).stop()
         self.ampscl = Scale(self.followAmp, outmin=1, outmax=0.1)
         # SIDECHAIN #
 

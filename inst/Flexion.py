@@ -34,9 +34,9 @@ class Flexion(PyoObject):
         in_fader,cs,freq,mul,add,lmax = convertArgsToLists(self._in_fader,cs,freq,mul,add)
         self._isON = Sig(cs) > .005
         self._amp = MidiAdsr(notein['velocity'])
-        self._modulator = Sine(Clip(cs,1,10), mul=in_fader)
-        self._panMod = Sine((in_fader*self._amp)+1, mul=.5, add=.5)
-        self._pitchMod = Sine(8*Clip(cs,1,10), mul=Clip(cs, -100.0, 100.0))
+        self._modulator = FastSine(Clip(cs,1,10), mul=in_fader)
+        self._panMod = FastSine((in_fader*self._amp)+1, mul=.5, add=.5)
+        self._pitchMod = FastSine(8*Clip(cs,1,10), mul=Clip(cs, -100.0, 100.0))
         self._mod = Harmonizer(self._modulator, transpo=self._pitchMod*self._amp, feedback=self._amp, mul=Port(self._isON))
         self._pan = Pan(self._mod, outs=outs, pan=self._panMod, spread=.3)
         self._out = Sig(self._pan, mul=mul, add=add)

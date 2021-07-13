@@ -41,7 +41,7 @@ class Balancement(PyoObject):
         self._trigL = TrigLinseg(notein['trigon'], [(0,0),(2,100),(4,10),(6,120),(8,0)]) 
         self._trigR = TrigLinseg(notein['trigon'], [(0,0),(2,10),(4,100),(6,12),(8,0)])
         self._mod = FreqShift(in_fader, [self._trigL,self._trigR], mul=Port(self._isON)).mix()
-        self._pan = Pan(self._mod, outs=outs, pan=self._fs2*self._fs3, spread=[.2,.2])
+        self._pan = Pan(self._mod, outs=outs, pan=[self._fs2*self._fs3,self._fs1*self._fs3], spread=[.2,.2])
         self._out = Sig(self._pan, mul=mul, add=add)
         self._base_objs = self._out.getBaseObjects()
 
