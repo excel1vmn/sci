@@ -57,7 +57,7 @@ class PercussionResonance(PyoObject):
         self._followAmp = Port(self._talk)
         self._ampscl = Scale(self._followAmp, outmin=1, outmax=.1)
 
-        lfo = Sine(freq=[.2, .25], mul=1000*Follower(in_fader), add=1500)
+        lfo = Sine(freq=[.2, .25], mul=1000*Follower(in_fader), add=500)
         self._reson = Resonx(in_fader, freq=lfo, q=5+self._amp*10, mul=5*self._ampscl)
         self._comp = Compress(Mix([self._reson,self._eq]), thresh=-10)
         self._mod = Sig(self._comp, mul=Port(self._isON))

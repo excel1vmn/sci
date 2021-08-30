@@ -409,7 +409,7 @@ class ReSampler:
         self.lst = [(0, 0)]
         for i in range(value):
             self.randPositions.append(math.floor(8192*((i+1)*.1)))
-            self.randPoints.append(random.uniform(-5,5))
+            self.randPoints.append(random.uniform(-1,1))
             self.lst.append((self.randPositions[i], self.randPoints[i]))
         self.lst.append((8191, 0))
         self.ind.replace(self.lst)

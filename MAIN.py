@@ -19,7 +19,7 @@ import math, os, sys
 ###############################################
 ################ SERVER SETUP #################
 ###############################################
-NAME = "SITÉ (Système d'improvisation de techniques d'écriture)"
+NAME = "SIMÉA (Système d'improvisation de modèles énergétiques acousmatiques)"
 NUMOUTS = 2
 SOUND_CARD = 'INT'
 ins = pa_get_output_devices()
@@ -92,7 +92,7 @@ raw = RawMidi(event)
 # p=Print(SIGTRIG, 1)
 
 #--- LAUNCH CONTROL XL ---#
-MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], minscale=0, maxscale=[1,1,1,1,1,1,1,3], init=0, channel=6), 3))
+MULPOW = Port(Pow(Midictl(ctlnumber=[77,78,79,80,81,82,83,84], minscale=0, maxscale=[1,1,1,1,1,1,1,5], init=0, channel=6), 3))
 CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                         29,30,31,32,33,34,35,36,
                         49,50,51,52,53,54,55,56],
@@ -215,7 +215,8 @@ LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.2, boost=-40, type=2, mul=MULPOW[7])
 HP.ctrl()
 LP.ctrl()
 COMP = Compress(LP.mix(), thresh=CS[15], ratio=8, knee=.5, outputAmp=True)
-downmix = Mix(LP * COMP, voices=NUMOUTS, mul=.3).out()
+downmix = Mix(LP * COMP, voices=NUMOUTS, mul=.5)
+CLIP = Clip(downmix, max=1).out()
 pre_output.addInput(0, downmix)
 pre_output.setAmp(0, 0, 1)
 pre_output.setAmp(0, 1, 1)
