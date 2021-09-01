@@ -21,15 +21,15 @@ import math, os, sys
 ###############################################
 NAME = "SIMÉA (Système d'improvisation de modèles énergétiques acousmatiques)"
 NUMOUTS = 2
-SOUND_CARD = 'INT'
+SOUND_CARD = 'EXT'
 ins = pa_get_output_devices()
 print(ins)
 
 # SERVER SETUP
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=48000, buffersize=1024, nchnls=12, duplex=1)
-        s.setInOutDevice(10)
+        s = Server(sr=48000, buffersize=1024, nchnls=2, duplex=1)
+        s.setInOutDevice(6)
         # print(s.setInOutDevice(ins[0].index('Babyface Pro (71965908): USB Audio (hw:2,0)')+1))
         print('EXT')
     else:
@@ -97,10 +97,10 @@ CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                         29,30,31,32,33,34,35,36,
                         49,50,51,52,53,54,55,56],
               minscale=[ 0, 0, 0, 0, 0, 0, 0, 0,
-                         0, 0, 0, 0, 0, 0, 0,-12,
+                         0, 0, 0, 0, 0, 0, 0,3000,
                          0, 0, 0, 0, 0, 0, 0, 0],
               maxscale=[ 1, 1, 1, 1, 1, 1, 1, 1,
-                         1, 1, 1, 1, 1, 1, 1,-30,
+                         1, 1, 1, 1, 1, 1, 1,20,
                          1, 1, 1, 1, 1, 1, 1, 1],
                   init=[ 0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0, 0, 0,
@@ -144,7 +144,7 @@ n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
 
 transpo = Bendin(brange=2, scale=1, channel=1)
 hfdamp = Midictl(ctlnumber=49, minscale=20, maxscale=15000, init=15000, channel=3)
-lfdamp = Midictl(ctlnumber=48, minscale=20, maxscale=18000, init=20, channel=3)
+lfdamp = Midictl(ctlnumber=48, minscale=-40, maxscale=12, init=0, channel=3)
 ###############################################
 ################## MIDI SETUP #################
 ###############################################
@@ -210,13 +210,14 @@ clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),
 
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
-HP = EQ(Mix([fr,ac,re,oc,fl,ba,fe,pr,clean_sig],NUMOUTS), freq=lfdamp, q=.5, boost=-30, type=1)
-LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.2, boost=-40, type=2, mul=MULPOW[7])
+HP = EQ(Mix([fr,ac,re,oc,fl,ba,fe,pr,clean_sig],NUMOUTS), freq=80, q=.5, boost=lfdamp, type=1)
+LP = EQ(Mix(HP,NUMOUTS), freq=hfdamp, q=.5, boost=-40, type=2, mul=MULPOW[7])
 HP.ctrl()
 LP.ctrl()
-COMP = Compress(LP.mix(), thresh=CS[15], ratio=8, knee=.5, outputAmp=True)
-downmix = Mix(LP * COMP, voices=NUMOUTS, mul=.5)
-CLIP = Clip(downmix, max=1).out()
+filt = ButLP(LP.mix(), freq=CS[15])
+COMP = Compress(filt.mix(), thresh=-12, ratio=8, knee=.5, outputAmp=True)
+downmix = Mix(filt * COMP, voices=NUMOUTS, mul=.5)
+CLIP = Clip(downmix, max=.98).out()
 pre_output.addInput(0, downmix)
 pre_output.setAmp(0, 0, 1)
 pre_output.setAmp(0, 1, 1)
