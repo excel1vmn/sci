@@ -20,7 +20,7 @@ import math, os, sys
 ################ SERVER SETUP #################
 ###############################################
 NAME = "SIMÉA (Système d'improvisation de modèles énergétiques acousmatiques)"
-NUMOUTS = 2
+NUMOUTS = 12
 SOUND_CARD = 'EXT'
 ins = pa_get_output_devices()
 print(ins)
@@ -28,8 +28,8 @@ print(ins)
 # SERVER SETUP
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=48000, buffersize=1024, nchnls=2, duplex=1)
-        s.setInOutDevice(6)
+        s = Server(sr=48000, buffersize=1024, nchnls=NUMOUTS, duplex=0)
+        s.setInOutDevice(14)
         # print(s.setInOutDevice(ins[0].index('Babyface Pro (71965908): USB Audio (hw:2,0)')+1))
         print('EXT')
     else:
@@ -105,21 +105,6 @@ CS = Midictl(ctlnumber=[13,14,15,16,17,18,19,20,
                   init=[ 0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0, 0, 0], channel=6)
-# SIGTRIG = Midictl(ctlnumber=[41,42,43,44,57,58,59,60,
-#                              73,74,75,76,89,90,91,92],
-#                       init=[ 0, 0, 0, 0, 0, 0, 0, 0,
-#                              0, 0, 0, 0, 0, 0, 0, 0,], channel=6)
-#--- LAUNCH CONTROL XL ---#
-
-#--- NAKED BOARDS ---#
-# MULPOW = Pow(Midictl(ctlnumber=[0,1,2,3,4,5,6,7], init=0, channel=1), 5)
-# CS = Midictl(ctlnumber=[ 8, 9,10,11,12,13,14,15,
-#                         16,17,18,19,20,21,22,23,
-#                         24,25,26,27,28,29,30,31], 
-#                   init=[ 0, 0, 0, 0, 0, 0, 0 ,0,
-#                          0, 0, 0, 0, 0, 0, 0 ,0,
-#                          0, 0, 0, 0, 0, 0, 0, 0], channel=1)
-#--- NAKED BOARDS ---#
 
 #--- LAUNCHPAD MINI ---#
 # Toggles certain parameters of ReSampler class instruments
@@ -160,7 +145,7 @@ lfdamp = Midictl(ctlnumber=48, minscale=-40, maxscale=12, init=0, channel=3)
 pre_output = Mixer(outs=NUMOUTS, chnls=1)
 dn = Noise(1e-24) # low-level noise for denormals
 
-drums = Drums(n10, drum_kit, toggles_row1, dn, transpo=transpo)
+# drums = Drums(n10, drum_kit, toggles_row1, dn, transpo=transpo)
 
 a1 = Synth(n2, trigs[0], toggles1, [CS[0],CS[8]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[0])
 a2 = FreakSynth(n2, trigs[1], toggles2, [CS[1],CS[9]], dn, transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[1])
@@ -173,7 +158,7 @@ r2 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[5], toggles6, [CS[5],CS[13]], 
 r3 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[6], toggles7, [CS[6],CS[14]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[6])
 # r4 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[7], toggles8, [CS[7],CS[15]], dn, transpo, hfdamp=hfdamp, mul=MULPOW[7])
 
-prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()], mul=toggles_row2)
+prefx = Sig([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig()], mul=toggles_row2)
 ###############################################
 ################# INSTRUMENTS #################
 ###############################################
@@ -206,7 +191,7 @@ pr = PercussionResonance(Mix(prefx+dn), n0, CS[23], freq=MToF(n0['pitch']), outs
 ###############################################
 ################ SIGNAL PATH ##################
 ###############################################
-clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig(),drums.sig()], voices=NUMOUTS), thresh=-6, ratio=4, risetime=.01, falltime=.2, knee=.5)
+clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig(),r1.sig(),r2.sig(),r3.sig()], voices=NUMOUTS), thresh=-6, ratio=4, risetime=.01, falltime=.2, knee=.5)
 
 ### les techniques d'écritures influence-t-elle le jeu
 ## faire une compairson A/B avec technique / sans technique
@@ -269,4 +254,4 @@ listener = keyboard.Listener(
     on_release=on_release)
 listener.start()
 
-s.gui(locals(), title=NAME)
+s.gui(locals())

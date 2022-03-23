@@ -10,23 +10,24 @@ from inst.Flux import *
 from inst.Balancement import *
 from inst.Flexion import *
 from inst.PercussionResonance import *
-# from gridHandler import *
+from pynput import keyboard
+from datetime import datetime
 import math, os, sys
+# from gridHandler import *
 # import threading
-# import keyboard
 
 ###############################################
 ################ SERVER SETUP #################
 ###############################################
 NAME = "MITÉ (Module d'interprétation de techniques d'écriture)"
-NUMOUTS = 2
-SOUND_CARD = 'EXT'
+NUMOUTS = 8
+SOUND_CARD = 'INT'
 
 # SERVER SETUP
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
         s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='pa')
-        s.setInOutDevice(0)
+        s.setInOutDevice(15)
         print('EXT')
     else:
         s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
@@ -141,7 +142,7 @@ oc = Oscillation(Mix([prefx]), n0, SIGSNB[19], freq=50, outs=NUMOUTS)
 fl = Flux(Mix([prefx]), n0, SIGSNB[20], freq=50, outs=NUMOUTS)
 ba = Balancement(Mix([prefx]), n0, SIGSNB[21], freq=50, outs=NUMOUTS)
 fe = Flexion(Mix([prefx]), n0, SIGSNB[22], freq=50, outs=NUMOUTS)
-pr = PercussionResonance(Mix([prefx]), n0, SIGSNB[23], ir=impulseR, freq=100, outs=NUMOUTS)
+pr = PercussionResonance(Mix([prefx]), n0, SIGSNB[23], freq=100, outs=NUMOUTS)
 
 clean_sig = Compress(Mix([a2.sig()], NUMOUTS), thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5)
 
