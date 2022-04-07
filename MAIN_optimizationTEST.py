@@ -20,7 +20,7 @@ import math, os, sys
 ################ SERVER SETUP #################
 ###############################################
 NAME = "MITÉ (Module d'interprétation de techniques d'écriture)"
-NUMOUTS = 8
+NUMOUTS = 2
 SOUND_CARD = 'INT'
 
 # SERVER SETUP
@@ -31,7 +31,7 @@ if NUMOUTS == 2:
         print('EXT')
     else:
         s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
-        s.setOutputDevice(3)
+        s.setOutputDevice(11)
         print('INT')
 else:
     s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='jack')
@@ -128,12 +128,15 @@ n0 = Notein(poly=4, scale=0, first=0, last=127, channel=0)
 
 pre_output = Mixer(outs=NUMOUTS, chnls=1)
 
+a1 = Synth(n2, trigs[0], toggles1, [SIGSNB[0],SIGSNB[8]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[0])
 a2 = FreakSynth(n2, trigs[1], toggles2, [SIGSNB[1],SIGSNB[9]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[1])
+a3 = Simpler(n2, snds, trigs[2], toggles3, [SIGSNB[2],SIGSNB[10]], transpo, hfdamp=hfdamp, autoswitch=False, withloop=False, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[2])
+a4 = WaveShape(n2, snds[6], trigs[3], toggles4, [SIGSNB[3],SIGSNB[11]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[3])
 
 # r1 = ReSampler(3, Mix(pre_output, NUMOUTS), trigs[4], toggles5, [SIGSNB[4],SIGSNB[12]], transpo, hfdamp=hfdamp, audioIN=Mix(pre_output, NUMOUTS), mul=MULPOW[4])
 
 
-prefx = Sig([a2.sig()], mul=toggles_row2)
+prefx = Sig(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig()]), mul=toggles_row2)
 
 fr = Frottement(Mix([prefx]), n0, SIGSNB[16], freq=[3,1.15,.5,.7,2.5,6,.04,15], outs=NUMOUTS)
 ac = Accumulation(Mix([prefx]), n0, SIGSNB[17], delay=.025, outs=NUMOUTS)
@@ -144,7 +147,7 @@ ba = Balancement(Mix([prefx]), n0, SIGSNB[21], freq=50, outs=NUMOUTS)
 fe = Flexion(Mix([prefx]), n0, SIGSNB[22], freq=50, outs=NUMOUTS)
 pr = PercussionResonance(Mix([prefx]), n0, SIGSNB[23], freq=100, outs=NUMOUTS)
 
-clean_sig = Compress(Mix([a2.sig()], NUMOUTS), thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5)
+clean_sig = Compress(Mix([a1.sig(),a2.sig(),a3.sig(),a4.sig()], NUMOUTS), thresh=-12, ratio=4, risetime=.01, falltime=.2, knee=.5)
 
 COMP = Compress(Mix([fr,ac,oc,fl,ba,fe,pr,clean_sig], NUMOUTS), thresh=-12, ratio=4, knee=.5)
 downmix = Mix(COMP, voices=NUMOUTS, mul=.3).out()

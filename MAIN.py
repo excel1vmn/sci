@@ -20,8 +20,8 @@ import math, os, sys
 ################ SERVER SETUP #################
 ###############################################
 NAME = "SIMÉA (Système d'improvisation de modèles énergétiques acousmatiques)"
-NUMOUTS = 12
-SOUND_CARD = 'EXT'
+NUMOUTS = 2
+SOUND_CARD = 'INT'
 ins = pa_get_output_devices()
 print(ins)
 
