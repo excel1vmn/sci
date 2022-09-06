@@ -28,12 +28,12 @@ print(ins)
 # SERVER SETUP
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
-        s = Server(sr=48000, buffersize=1024, nchnls=NUMOUTS, duplex=0)
+        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0)
         s.setInOutDevice(14)
         # print(s.setInOutDevice(ins[0].index('Babyface Pro (71965908): USB Audio (hw:2,0)')+1))
         print('EXT')
     else:
-        s = Server(sr=48000, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
+        s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
         s.setOutputDevice((ins[1][ins[0].index('pulse')]))
         # print(s.setOutputDevice(ins[1][ins[0].index('pulse')]))
         print('INT')

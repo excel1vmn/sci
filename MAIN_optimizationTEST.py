@@ -27,7 +27,7 @@ SOUND_CARD = 'INT'
 if NUMOUTS == 2:
     if SOUND_CARD == 'EXT':
         s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='pa')
-        s.setInOutDevice(15)
+        s.setOutputDevice(11)
         print('EXT')
     else:
         s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=0, audio='pa')
@@ -36,13 +36,13 @@ if NUMOUTS == 2:
 else:
     s = Server(sr=44100, buffersize=1024, nchnls=NUMOUTS, duplex=1, audio='jack')
     s.setJackAuto()
-    s.setInOutDevice(1)
+    s.setOutputDevice(15)
     print('JACK')
 
 # LINUX AUDIO/MIDI CONFIG
 def scanMidi():
     s.setMidiInputDevice(99)
-    # s.setMidiOutputDevice(99)
+    s.setMidiOutputDevice(99)
     pa_list_devices()
     pm_list_devices()
     print('scanned')
@@ -84,7 +84,7 @@ def ctl_scan(ctlnum, midichnl):
 ctlscan = CtlScan2(ctl_scan, False)
 
 def event(status, data1, data2):
-    # print(status, data1, data2)
+    print(status, data1, data2)
     if data1 == 105 and data2 == 127:
         scanMidi()
 raw = RawMidi(event)
